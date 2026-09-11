@@ -16,6 +16,7 @@ import {
   CrossDocumentFinding,
   OfficerDecisionType
 } from './types';
+import { ProcurementDecisionRecord } from '@/types/procurement-decision';
 import {
   evaluateRequirementDeterministic,
   calculateProgrammaticComplianceScore,
@@ -165,6 +166,7 @@ export const STANDARD_CPCL_REQUIREMENTS: StructuredRequirement[] = [
 
 // Persistent state store across application runtime
 const IN_MEMORY_DOSSIERS = new Map<string, BidderEvaluationDossier>();
+const IN_MEMORY_DECISIONS = new Map<string, ProcurementDecisionRecord[]>();
 
 /**
  * Initializes the 3 canonical SIH26100 bidder evaluation dossiers
@@ -341,11 +343,15 @@ function initializeCanonicalScenarios() {
     ],
     aiRecommendation: aiA,
     officerDecision: {
-      decision: 'QUALIFIED',
-      officerName: 'R. K. Sharma',
-      officerRole: 'Superintending Engineer & Tender Officer',
+      decision: 'APPROVED',
+      officerName: 'Dr. R. Venkataraman',
+      officerRole: 'Senior Procurement Officer',
       timestamp: '10 Sep 2026, 23:45 IST',
-      notes: 'All mandatory requirements verified against statutory registries and audited accounts. Qualified for commercial opening.'
+      notes: 'All mandatory requirements verified against statutory registries and audited accounts. Qualified for commercial opening.',
+      decisionId: 'DEC-CPCL-2026-0412-001',
+      decisionVersion: 1,
+      integrityHash: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+      status: 'SIGNED'
     },
     auditEvents: [
       {
@@ -970,6 +976,33 @@ function initializeCanonicalScenarios() {
       }
     ]
   });
+
+  IN_MEMORY_DECISIONS.set('bid-apex-02', [
+    {
+      id: 'dec-uuid-apex-01',
+      decision_id: 'DEC-CPCL-2026-0412-001',
+      tender_id: 'tender-cpcl-2026-0412',
+      bid_id: 'bid-apex-02',
+      bidder_id: 'CL-2026-91C25F34',
+      bidder_name: 'Apex Heavy Engineering Pvt Ltd',
+      officer_user_id: 'officer-cpcl-01',
+      officer_name: 'Dr. R. Venkataraman',
+      officer_email: 'r.venkataraman@cpcl.gov.in',
+      organisation: 'Chennai Petroleum Corporation Limited',
+      officer_role: 'Senior Procurement Officer',
+      decision: 'APPROVED',
+      remarks: 'All mandatory requirements verified against statutory registries and audited accounts. Qualified for commercial opening.',
+      compliance_score_snapshot: 100,
+      risk_level_snapshot: 'LOW',
+      ai_recommendation_snapshot: 'COMPLIANT',
+      signed_at: new Date('2026-09-10T18:15:00.000Z').toISOString(),
+      decision_version: 1,
+      status: 'SIGNED',
+      integrity_hash: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+      created_at: new Date('2026-09-10T18:15:00.000Z').toISOString(),
+      updated_at: new Date('2026-09-10T18:15:00.000Z').toISOString()
+    }
+  ]);
 }
 
 // Auto initialize on module import
@@ -1049,3 +1082,82 @@ export function recordOfficerVerdict(
   IN_MEMORY_DOSSIERS.set(bidId, dossier);
   return { success: true, dossier };
 }
+
+/**
+ * Registers an official digital approval & decision signature into the shared state store
+ */
+export function recordSignedProcurementDecision(
+  record: ProcurementDecisionRecord
+): { success: boolean; dossier?: BidderEvaluationDossier } {
+  initializeCanonicalScenarios();
+  const existing = IN_MEMORY_DECISIONS.get(record.bid_id) || [];
+
+  // If new version, mark previous active decision as SUPERSEDED
+  if (record.decision_version > 1) {
+    existing.forEach((d) => {
+      if (d.status === 'SIGNED') {
+        d.status = 'SUPERSEDED';
+      }
+    });
+  }
+
+  existing.push(record);
+  IN_MEMORY_DECISIONS.set(record.bid_id, existing);
+
+  // Update dossier state
+  const dossier = IN_MEMORY_DOSSIERS.get(record.bid_id);
+  if (dossier) {
+    const timestampFormatted = new Date(record.signed_at).toLocaleString('en-GB', {
+      timeZone: 'Asia/Kolkata',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }) + ' IST';
+
+    dossier.officerDecision = {
+      decision: record.decision,
+      officerName: record.officer_name,
+      officerRole: record.officer_role,
+      timestamp: timestampFormatted,
+      notes: record.remarks,
+      decisionId: record.decision_id,
+      decisionVersion: record.decision_version,
+      integrityHash: record.integrity_hash,
+      status: record.status,
+    };
+
+    if (!dossier.auditEvents) {
+      dossier.auditEvents = [];
+    }
+    dossier.auditEvents.push({
+      timestamp: timestampFormatted,
+      actor: record.officer_name || 'Procurement Officer',
+      role: record.officer_role || 'Tender Authority',
+      action: record.decision_version > 1 ? 'Officer Decision Revised' : 'Officer Decision Signed',
+      entity: record.decision_id,
+      details: `Official sovereign decision ${record.decision} (v${record.decision_version}) digitally signed. SHA-256 Seal: ${record.integrity_hash.slice(0, 16)}... Remarks: ${record.remarks}`,
+    });
+
+    IN_MEMORY_DOSSIERS.set(record.bid_id, dossier);
+  }
+
+  return { success: true, dossier };
+}
+
+/**
+ * Retrieves the latest signed decision for a bid
+ */
+export function getSignedProcurementDecision(bidId: string): ProcurementDecisionRecord | null {
+  initializeCanonicalScenarios();
+  const list = IN_MEMORY_DECISIONS.get(bidId);
+  if (!list || list.length === 0) return null;
+  return list[list.length - 1];
+}
+
+/**
+ * Retrieves all versions of signed decisions for a bid (audit trail)
+ */
+export function getAllSignedDecisionsForBid(bidId: string): ProcurementDecisionRecord[] {
+  initializeCanonicalScenarios();
+  return IN_MEMORY_DECISIONS.get(bidId) || [];
+}
+

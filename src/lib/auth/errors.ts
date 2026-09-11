@@ -31,7 +31,7 @@ export function classifyAuthError(error: unknown): AuthErrorDetails {
     };
   }
 
-  const errObj = typeof error === 'object' && error !== null ? (error as Record<string, any>) : {};
+  const errObj = typeof error === 'object' && error !== null ? (error as Record<string, unknown>) : {};
   let rawMsg = '';
   if (typeof error === 'string') {
     rawMsg = error;

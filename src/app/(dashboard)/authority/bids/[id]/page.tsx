@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { 
@@ -14,19 +14,24 @@ import {
   FileText, 
   Eye, 
   Check, 
-  X,
-  FileCheck2,
-  ExternalLink
+  X, 
+  FileCheck2, 
+  ExternalLink 
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ExportAuditPdfButton } from '@/components/audit/ExportAuditPdfButton';
 import { MatchedRequirementsPdfButton } from '@/components/reports/MatchedRequirementsPdfButton';
+import { OfficerDecisionSection } from '@/components/authority/OfficerDecisionSection';
+import { SignedDecisionPdfButton } from '@/components/authority/SignedDecisionPdfButton';
+import { getUserProfile } from '@/app/auth/actions';
+import { getLatestProcurementDecision } from '@/lib/actions/decisions';
 import { recordOfficerDecision } from '@/lib/actions/audit';
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
 import { CorrigendumManager } from '@/components/tenders/CorrigendumManager';
 import { getBidderDossier, recordOfficerVerdict } from '@/lib/compliance/repository';
 import { CrossDocumentFinding, RequirementComplianceResult } from '@/lib/compliance/types';
 import { runAllStatutoryEvaluations } from '@/lib/providers/providers';
+import type { ProcurementDecisionRecord } from '@/types/procurement-decision';
 
 interface PrioritizedFinding {
   id: string;
@@ -51,11 +56,57 @@ export default function AuthorityBidDetailPage() {
     timestamp: string;
     notes?: string;
   } | null>(dossier.officerDecision || null);
+  const [signedDecision, setSignedDecision] = useState<ProcurementDecisionRecord | null>(null);
+  const [officerProfile, setOfficerProfile] = useState<{
+    fullName: string;
+    email: string;
+    organisationName: string;
+    role: string;
+  }>({
+    fullName: 'Dr. R. Venkataraman',
+    email: 'r.venkataraman@cpcl.gov.in',
+    organisationName: 'Chennai Petroleum Corporation Limited',
+    role: 'tender_authority',
+  });
+
   const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
   const [decisionType, setDecisionType] = useState<'QUALIFIED' | 'DISQUALIFIED'>('QUALIFIED');
   const [decisionNotes, setDecisionNotes] = useState('');
   const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
   const [decisionSuccessMsg, setDecisionSuccessMsg] = useState('');
+
+  useEffect(() => {
+    getUserProfile().then((prof) => {
+      if (prof) {
+        setOfficerProfile({
+          fullName: prof.fullName || 'Dr. R. Venkataraman',
+          email: prof.email || 'r.venkataraman@cpcl.gov.in',
+          organisationName: prof.organisationName || 'Chennai Petroleum Corporation Limited',
+          role: prof.role || 'tender_authority',
+        });
+      }
+    }).catch((err) => console.warn('Profile fetch notice:', err));
+
+    getLatestProcurementDecision(bidId).then((res) => {
+      if (res.success && res.decision) {
+        setSignedDecision(res.decision);
+        setOfficerDecision({
+          decision: res.decision.decision,
+          timestamp: res.decision.signed_at,
+          notes: res.decision.remarks,
+        });
+      }
+    }).catch((err) => console.warn('Decision fetch notice:', err));
+  }, [bidId]);
+
+  const handleDecisionSigned = (decision: ProcurementDecisionRecord) => {
+    setSignedDecision(decision);
+    setOfficerDecision({
+      decision: decision.decision,
+      timestamp: decision.signed_at,
+      notes: decision.remarks,
+    });
+  };
 
   const bidder = {
     companyName: dossier.bidderName,
@@ -161,22 +212,43 @@ export default function AuthorityBidDetailPage() {
               label="Export Audit PDF"
             />
             {officerDecision ? (
-              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-semibold border ${
-                officerDecision.decision === 'QUALIFIED'
-                  ? 'bg-[#F7F7F7] text-[#111111] border-[#111111]'
-                  : 'bg-[#FFF5F5] text-[#991B1B] border-[#FCA5A5]'
-              }`}>
-                {officerDecision.decision === 'QUALIFIED' ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#111111]" />
-                ) : (
-                  <XCircle className="w-3.5 h-3.5 text-[#991B1B]" />
-                )}
-                <span>DECISION: {officerDecision.decision}</span>
+              <div className="flex items-center gap-2">
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-semibold border ${
+                  officerDecision.decision === 'QUALIFIED' || officerDecision.decision === 'APPROVED'
+                    ? 'bg-[#F7F7F7] text-[#111111] border-[#111111]'
+                    : officerDecision.decision === 'CLARIFICATION_REQUIRED'
+                    ? 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]'
+                    : 'bg-[#FFF5F5] text-[#991B1B] border-[#FCA5A5]'
+                }`}>
+                  {officerDecision.decision === 'QUALIFIED' || officerDecision.decision === 'APPROVED' ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#111111]" />
+                  ) : officerDecision.decision === 'CLARIFICATION_REQUIRED' ? (
+                    <AlertTriangle className="w-3.5 h-3.5 text-[#B45309]" />
+                  ) : (
+                    <XCircle className="w-3.5 h-3.5 text-[#991B1B]" />
+                  )}
+                  <span>DECISION: {officerDecision.decision}</span>
+                </div>
+                <SignedDecisionPdfButton
+                  bidId={dossier.bidId}
+                  decision={signedDecision}
+                  dossier={dossier}
+                  tenderTitle={bidder.tenderTitle}
+                  tenderReference={bidder.tenderReference}
+                  label="Signed Decision PDF"
+                />
               </div>
             ) : (
               <Button 
                 size="sm" 
-                onClick={() => setIsDecisionModalOpen(true)}
+                onClick={() => {
+                  const el = document.getElementById('officer-decision-section');
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth' });
+                  } else {
+                    setIsDecisionModalOpen(true);
+                  }
+                }}
                 className="h-8 px-4 bg-[#111111] hover:bg-[#222222] text-white font-medium text-xs gap-1.5 cursor-pointer rounded-md"
               >
                 <Check className="w-3.5 h-3.5" />
@@ -467,6 +539,20 @@ export default function AuthorityBidDetailPage() {
             </table>
           </div>
         </div>
+      </div>
+
+      {/* 3. OFFICER DECISION & APPROVAL (SIH26100 SOVEREIGN DECISION WORKFLOW) */}
+      <div id="officer-decision-section">
+        <OfficerDecisionSection
+          bidId={dossier.bidId}
+          tenderId={dossier.tenderId}
+          tenderTitle={bidder.tenderTitle}
+          tenderReference={bidder.tenderReference}
+          dossier={dossier}
+          initialDecision={signedDecision}
+          officerProfile={officerProfile}
+          onDecisionSigned={handleDecisionSigned}
+        />
       </div>
 
       {/* INSPECT EVIDENCE POPUP MODAL */}

@@ -38,7 +38,11 @@ export type OfficerDecisionType =
   | 'QUALIFIED'
   | 'DISQUALIFIED'
   | 'REQUIRES CLARIFICATION'
-  | 'PENDING REVIEW';
+  | 'PENDING REVIEW'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'CLARIFICATION_REQUIRED'
+  | 'MANUAL_REVIEW';
 
 /**
  * Structured requirement clause extracted from Tender document
@@ -178,6 +182,10 @@ export interface BidderEvaluationDossier {
     officerRole: string;
     timestamp: string;
     notes: string;
+    decisionId?: string;
+    decisionVersion?: number;
+    integrityHash?: string;
+    status?: string;
   };
   auditEvents?: AuditPdfRecord[];
 }
