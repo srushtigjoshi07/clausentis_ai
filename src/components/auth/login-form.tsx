@@ -2,26 +2,31 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { login } from '@/app/auth/actions';
+import { login, type AuthActionResult } from '@/app/auth/actions';
 import { Button } from '@/components/ui/button';
-import { Loader2, Shield, Building2, Briefcase, CheckCircle2 } from 'lucide-react';
+import { Loader2, Shield, Building2, Briefcase, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { GoogleAuthButton } from './google-auth-button';
 import type { UserRole } from '@/types/auth-roles';
 
 export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
+  const [details, setDetails] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState<UserRole>('bidder');
-  
+
   async function onSubmit(formData: FormData) {
     setIsLoading(true);
     setError(null);
+    setDetails(null);
     formData.set('role', selectedRole);
-    const result = await login(formData);
-    if (result?.error) {
+
+    const result = (await login(formData)) as AuthActionResult | void;
+
+    if (result && 'error' in result && result.error) {
       setError(result.error);
+      setDetails(result.details || null);
       setIsLoading(false);
     }
   }
@@ -31,6 +36,7 @@ export function LoginForm() {
     setPassword('password123');
     setSelectedRole('tender_authority');
     setError(null);
+    setDetails(null);
   };
 
   const fillDemoBidder = () => {
@@ -38,6 +44,7 @@ export function LoginForm() {
     setPassword('password123');
     setSelectedRole('bidder');
     setError(null);
+    setDetails(null);
   };
 
   return (
@@ -76,7 +83,7 @@ export function LoginForm() {
         </div>
       </div>
 
-      {/* 1-Click Demo Persona Quick-Fill Banner */}
+      {/* Fast Demo Persona Quick-Fill Banner */}
       <div className="p-3.5 rounded-xl border border-[#E5E5E5] bg-[#F7F7F7] space-y-2">
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-1.5 text-[#111111] font-medium">
@@ -107,7 +114,7 @@ export function LoginForm() {
 
       <form action={onSubmit}>
         <input type="hidden" name="role" value={selectedRole} />
-        
+
         <div className="grid gap-4">
           {/* Email */}
           <div className="grid gap-2">
@@ -120,7 +127,7 @@ export function LoginForm() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="m@example.com"
+              placeholder="officer@cpcl.gov.in"
               required
               autoComplete="email"
               className="flex h-10 w-full rounded-md border border-[#E5E5E5] bg-white px-3 py-2 text-sm text-[#111111] placeholder:text-[#777777] focus:outline-none focus:border-[#111111] focus:ring-1 focus:ring-[#111111] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
@@ -140,29 +147,46 @@ export function LoginForm() {
                 Forgot password?
               </Link>
             </div>
-            <input 
-              id="password" 
+            <input
+              id="password"
               name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              required 
+              required
               autoComplete="current-password"
               className="flex h-10 w-full rounded-md border border-[#E5E5E5] bg-white px-3 py-2 text-sm text-[#111111] placeholder:text-[#777777] focus:outline-none focus:border-[#111111] focus:ring-1 focus:ring-[#111111] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
             />
           </div>
 
-          {error && <div className="text-sm text-[#111111] font-medium border border-[#E5E5E5] bg-[#F7F7F7] p-2 rounded-md">{error}</div>}
+          {/* User-Friendly Error Alert */}
+          {error && (
+            <div className="p-3.5 rounded-xl border border-[#FECACA] bg-[#FEF2F2] text-[#991B1B] text-xs leading-relaxed space-y-1.5">
+              <div className="flex items-start gap-2">
+                <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0 text-[#DC2626]" />
+                <div className="space-y-1 flex-1">
+                  <div className="font-semibold">{error}</div>
+                  {details && (
+                    <div className="text-[10px] font-mono opacity-70 pt-1 border-t border-red-200">
+                      Technical info: {details}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Sign In Button */}
-          <Button 
-            type="submit" 
-            className="w-full h-10 bg-[#111111] hover:bg-[#222222] text-white font-semibold text-sm shadow-sm transition-all cursor-pointer" 
+          <Button
+            type="submit"
+            className="w-full h-10 bg-[#111111] hover:bg-[#222222] text-white font-semibold text-sm shadow-sm transition-all cursor-pointer"
             disabled={isLoading}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isLoading ? 'Signing in...' : `Sign in as ${selectedRole === 'tender_authority' ? 'Tender Authority' : 'Bidder / Vendor'}`}
+            {isLoading
+              ? 'Signing in...'
+              : `Sign in as ${selectedRole === 'tender_authority' ? 'Tender Authority' : 'Bidder / Vendor'}`}
           </Button>
         </div>
       </form>
@@ -184,7 +208,10 @@ export function LoginForm() {
       {/* Sign Up Link */}
       <div className="text-center text-sm text-[#555555]">
         Don&apos;t have an account?{' '}
-        <Link href="/signup" className="text-[#111111] font-semibold hover:underline underline-offset-4 transition-colors">
+        <Link
+          href="/signup"
+          className="text-[#111111] font-semibold hover:underline underline-offset-4 transition-colors"
+        >
           Sign up
         </Link>
       </div>

@@ -35,8 +35,13 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const url = request.nextUrl.clone();
+  
+  // Resolve role from metadata first (immutable from client), then cookie
+  const metadataRole = user?.user_metadata?.role as string | undefined;
   const roleCookie = request.cookies.get('clausentis_role')?.value;
-  const userRole = roleCookie === 'tender_authority' ? 'tender_authority' : 'bidder';
+  const userRole = metadataRole
+    ? (metadataRole === 'tender_authority' ? 'tender_authority' : 'bidder')
+    : (roleCookie === 'tender_authority' ? 'tender_authority' : 'bidder');
 
   // 1. Unauthenticated users cannot access protected routes
   const isProtectedRoute = 
@@ -45,7 +50,8 @@ export async function updateSession(request: NextRequest) {
     url.pathname.startsWith('/dashboard') ||
     url.pathname.startsWith('/documents') ||
     url.pathname.startsWith('/reports') ||
-    url.pathname.startsWith('/settings');
+    url.pathname.startsWith('/settings') ||
+    url.pathname.startsWith('/tenders');
 
   if (isProtectedRoute && !user) {
     url.pathname = '/login';
