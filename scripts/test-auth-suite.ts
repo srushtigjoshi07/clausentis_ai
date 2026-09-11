@@ -58,7 +58,7 @@ async function runSuite() {
       const classified = classifyAuthError(data);
       const isHandled =
         classified.code === 'EMAIL_RATE_LIMITED' &&
-        classified.message.includes('Email verification is temporarily rate-limited');
+        classified.message === 'Email verification is temporarily unavailable. Please try again later.';
       recordTest(
         1,
         'New bidder signup',
@@ -224,8 +224,7 @@ async function runSuite() {
     const classified = classifyAuthError(rawSupabaseError);
     const pass =
       classified.code === 'EMAIL_RATE_LIMITED' &&
-      classified.message ===
-        'Email verification is temporarily rate-limited. Please wait and try again, or use another email address.' &&
+      classified.message === 'Email verification is temporarily unavailable. Please try again later.' &&
       !classified.message.includes('over_email_send_rate_limit') &&
       Boolean(classified.technicalDetails?.includes('over_email_send_rate_limit'));
     recordTest(

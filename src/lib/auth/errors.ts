@@ -66,7 +66,7 @@ export function classifyAuthError(error: unknown): AuthErrorDetails {
   ) {
     return {
       code: 'EMAIL_RATE_LIMITED',
-      message: 'Email verification is temporarily rate-limited. Please wait and try again, or use another email address.',
+      message: 'Email verification is temporarily unavailable. Please try again later.',
       suggestion: 'Supabase email send quotas refresh periodically. You can also sign in directly if you already have an account.',
       technicalDetails,
     };

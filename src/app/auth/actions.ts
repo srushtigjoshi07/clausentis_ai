@@ -2,10 +2,36 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { classifyAuthError, type AuthErrorCode } from '@/lib/auth/errors';
 import type { UserRole, UserProfile } from '@/types/auth-roles';
+
+export async function getSiteUrl(): Promise<string> {
+  // 1. Explicit production site URL
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/+$/, '');
+  }
+  // 2. Vercel deployment URL
+  if (process.env.NEXT_PUBLIC_VERCEL_URL) {
+    return `https://${process.env.NEXT_PUBLIC_VERCEL_URL.replace(/\/+$/, '')}`;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL.replace(/\/+$/, '')}`;
+  }
+  // 3. Dynamic header detection
+  try {
+    const headerList = await headers();
+    const host = headerList.get('x-forwarded-host') || headerList.get('host');
+    const proto = headerList.get('x-forwarded-proto') || (host?.includes('localhost') ? 'http' : 'https');
+    if (host) {
+      return `${proto}://${host}`;
+    }
+  } catch {
+    // fallback
+  }
+  return 'http://localhost:3000';
+}
 
 export interface AuthActionResult {
   success?: boolean;
@@ -152,8 +178,8 @@ export async function signup(formData: FormData): Promise<AuthActionResult | voi
     };
   }
 
-  // Determine site URL for verification callback
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  // Determine site URL for verification callback dynamically
+  const siteUrl = await getSiteUrl();
   const emailRedirectTo = `${siteUrl}/auth/callback`;
 
   // 2. Call Supabase Auth signUp
@@ -195,7 +221,7 @@ export async function signup(formData: FormData): Promise<AuthActionResult | voi
       success: true,
       requiresEmailVerification: true,
       email: authData.user.email || email,
-      message: 'Check your email to verify your account. Once verified, you can sign in.',
+      message: 'Account created. Please check your email to verify your account.',
     };
   }
 

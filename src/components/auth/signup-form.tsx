@@ -83,7 +83,7 @@ export function SignupForm() {
         </div>
         <div className="space-y-2">
           <h3 className="text-lg font-bold text-[#111111]">
-            Check your email to verify your account
+            Account created. Please check your email to verify your account.
           </h3>
           <p className="text-sm text-[#555555] leading-relaxed">
             We have sent a verification link to{' '}
