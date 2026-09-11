@@ -59,12 +59,68 @@ function getScrollHeight(): number {
   );
 }
 
+function getSectionProgress(scrollTop: number): number {
+  if (typeof window === 'undefined') return 0;
+
+  const doc = document.documentElement;
+  const clientHeight = window.innerHeight || doc.clientHeight || 1;
+  const scrollHeight = Math.max(
+    doc.scrollHeight || 0,
+    document.body.scrollHeight || 0,
+    doc.clientHeight || 0,
+    1
+  );
+  const maxScroll = Math.max(1, scrollHeight - clientHeight);
+  if (scrollTop <= 0) return 0;
+  if (scrollTop >= maxScroll) return 1;
+
+  const secDocs = document.getElementById('chapter-documents');
+  const secDecomp = document.getElementById('chapter-decomposition');
+  const secPaths = document.getElementById('chapter-pathways');
+  const secWork = document.getElementById('workspace');
+
+  if (!secDocs || !secDecomp || !secPaths || !secWork) {
+    return Math.min(Math.max(scrollTop / maxScroll, 0), 1);
+  }
+
+  const top2 = secDocs.offsetTop;
+  const top3 = secDecomp.offsetTop;
+  const top4 = secPaths.offsetTop;
+  const top5 = secWork.offsetTop;
+
+  // Scene 01: Hero (0.000 to 0.125)
+  if (scrollTop < top2) {
+    const t = scrollTop / Math.max(1, top2);
+    return t * 0.125;
+  }
+
+  // Scene 02: Complex Documents (0.125 to 0.250)
+  if (scrollTop < top3) {
+    const t = (scrollTop - top2) / Math.max(1, top3 - top2);
+    return 0.125 + t * 0.125;
+  }
+
+  // Scene 03: Autonomous Decomposition (0.250 to 0.375)
+  if (scrollTop < top4) {
+    const t = (scrollTop - top3) / Math.max(1, top4 - top3);
+    return 0.250 + t * 0.125;
+  }
+
+  // Scene 04: Organized Intelligence Pathways (0.375 to 0.500)
+  if (scrollTop < top5) {
+    const t = (scrollTop - top4) / Math.max(1, top5 - top4);
+    return 0.375 + t * 0.125;
+  }
+
+  // Scenes 05 - 08: Workspace through Footer (0.500 to 1.000)
+  const remainingScroll = Math.max(1, maxScroll - top5);
+  const t = Math.min(Math.max((scrollTop - top5) / remainingScroll, 0), 1);
+  return 0.500 + t * 0.500;
+}
+
 function handleScrollEvent() {
   const scrollTop = getScrollTop();
-  const scrollHeight = getScrollHeight();
-  const clientHeight = window.innerHeight || document.documentElement.clientHeight || 1;
-  const maxScroll = Math.max(1, scrollHeight - clientHeight);
-  targetRaw = Math.min(Math.max(scrollTop / maxScroll, 0), 1);
+  targetRaw = getSectionProgress(scrollTop);
   isDirty = true;
   startLoop();
 }

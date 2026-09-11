@@ -319,14 +319,14 @@ export function MorphingIntelligenceCore({ progresses, reducedMotion }: Morphing
     const time = reducedMotion ? 0 : clock.getElapsedTime();
 
     // Scene Visibility Windows
-    const a1 = global < 0.14 ? Math.max(0, 1 - global / 0.14) : 0;
-    const a2 = (global >= 0.11 && global <= 0.27) ? Math.sin(Math.min(Math.max((global - 0.11) / 0.16, 0), 1) * Math.PI) : 0;
-    const a3 = (global >= 0.23 && global <= 0.39) ? Math.sin(Math.min(Math.max((global - 0.23) / 0.16, 0), 1) * Math.PI) : 0;
-    const a4 = (global >= 0.35 && global <= 0.52) ? Math.sin(Math.min(Math.max((global - 0.35) / 0.17, 0), 1) * Math.PI) : 0;
-    const a5 = (global >= 0.48 && global <= 0.64) ? Math.sin(Math.min(Math.max((global - 0.48) / 0.16, 0), 1) * Math.PI) : 0;
-    const a6 = (global >= 0.60 && global <= 0.77) ? Math.sin(Math.min(Math.max((global - 0.60) / 0.17, 0), 1) * Math.PI) : 0;
-    const a7 = (global >= 0.73 && global <= 0.89) ? Math.sin(Math.min(Math.max((global - 0.73) / 0.16, 0), 1) * Math.PI) : 0;
-    const a8 = global >= 0.85 ? Math.min((global - 0.85) / 0.15, 1) : 0;
+    const a1 = global < 0.135 ? Math.max(0, 1 - global / 0.125) : 0;
+    const a2 = (global >= 0.125 && global <= 0.255) ? Math.sin(Math.min(Math.max((global - 0.125) / 0.125, 0), 1) * Math.PI) : 0;
+    const a3 = (global >= 0.250 && global <= 0.380) ? Math.sin(Math.min(Math.max((global - 0.250) / 0.125, 0), 1) * Math.PI) : 0;
+    const a4 = (global >= 0.375 && global <= 0.505) ? Math.sin(Math.min(Math.max((global - 0.375) / 0.125, 0), 1) * Math.PI) : 0;
+    const a5 = (global >= 0.500 && global <= 0.635) ? Math.sin(Math.min(Math.max((global - 0.500) / 0.125, 0), 1) * Math.PI) : 0;
+    const a6 = (global >= 0.625 && global <= 0.760) ? Math.sin(Math.min(Math.max((global - 0.625) / 0.125, 0), 1) * Math.PI) : 0;
+    const a7 = (global >= 0.750 && global <= 0.885) ? Math.sin(Math.min(Math.max((global - 0.750) / 0.125, 0), 1) * Math.PI) : 0;
+    const a8 = global >= 0.875 ? Math.min((global - 0.875) / 0.125, 1) : 0;
 
     // Starlight drift
     if (bgLayer1Ref.current) {

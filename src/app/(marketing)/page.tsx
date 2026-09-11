@@ -62,7 +62,7 @@ function HeroSection() {
   const ctaOpacity = Math.max(0, 1 - p * 2.4);
 
   return (
-    <section className="relative min-h-screen flex flex-col justify-center items-center text-center px-4 sm:px-6 lg:px-8 z-10 select-none pointer-events-none">
+    <section id="chapter-hero" className="relative min-h-screen flex flex-col justify-center items-center text-center px-4 sm:px-6 lg:px-8 z-10 select-none pointer-events-none">
       <div className="max-w-4xl mx-auto space-y-6 pt-20 pb-16 pointer-events-auto">
         {/* Eyebrow badge */}
         <div
@@ -150,10 +150,10 @@ function DocumentsSection() {
   // Scene 02 window: 0.125 to 0.250
   const s2 = (global - 0.125) / 0.125;
 
-  // Entrance motion: -0.3 to 0.25
-  const enterAlpha = smoothStep(-0.25, 0.18, s2);
-  // Exit motion: 0.70 to 1.15
-  const exitAlpha = smoothStep(0.72, 1.10, s2);
+  // Entrance motion: 0.00 to 0.22
+  const enterAlpha = smoothStep(0.00, 0.22, s2);
+  // Exit motion: 0.78 to 1.00
+  const exitAlpha = smoothStep(0.78, 1.00, s2);
   const totalAlpha = enterAlpha * (1 - exitAlpha);
 
   // Eyebrow mask-reveal
@@ -178,7 +178,7 @@ function DocumentsSection() {
   const climaxAlpha = smoothStep(0.78, 0.95, s2) * (1 - smoothStep(1.05, 1.20, s2));
 
   return (
-    <section className="relative min-h-[85vh] flex flex-col justify-center items-center text-center px-4 sm:px-6 lg:px-8 z-10 py-24 select-none pointer-events-none">
+    <section id="chapter-documents" className="relative min-h-screen flex flex-col justify-center items-center text-center px-4 sm:px-6 lg:px-8 z-10 py-24 select-none pointer-events-none">
       <div
         className="max-w-3xl mx-auto space-y-6 pointer-events-auto will-change-transform"
         style={{
@@ -268,8 +268,8 @@ function DecompositionSection() {
   // Scene 03 window: 0.250 to 0.375
   const s3 = (global - 0.250) / 0.125;
 
-  const enterAlpha = smoothStep(-0.22, 0.20, s3);
-  const exitAlpha = smoothStep(0.75, 1.10, s3);
+  const enterAlpha = smoothStep(0.00, 0.22, s3);
+  const exitAlpha = smoothStep(0.78, 1.00, s3);
   const totalAlpha = enterAlpha * (1 - exitAlpha);
 
   const headingY = (1 - enterAlpha) * 30 - exitAlpha * 40;
@@ -278,7 +278,7 @@ function DecompositionSection() {
   const compressAlpha = smoothStep(0.75, 0.95, s3);
 
   return (
-    <section className="relative min-h-[85vh] flex flex-col justify-center items-center text-center px-4 sm:px-6 lg:px-8 z-10 py-24 select-none pointer-events-none">
+    <section id="chapter-decomposition" className="relative min-h-screen flex flex-col justify-center items-center text-center px-4 sm:px-6 lg:px-8 z-10 py-24 select-none pointer-events-none">
       <div
         className="max-w-4xl mx-auto space-y-6 pointer-events-auto will-change-transform"
         style={{
@@ -375,8 +375,8 @@ function PathwaysSection() {
   // Scene 04 window: 0.375 to 0.500
   const s4 = (global - 0.375) / 0.125;
 
-  const enterAlpha = smoothStep(-0.22, 0.20, s4);
-  const exitAlpha = smoothStep(0.78, 1.10, s4);
+  const enterAlpha = smoothStep(0.00, 0.22, s4);
+  const exitAlpha = smoothStep(0.80, 1.00, s4);
   const totalAlpha = enterAlpha * (1 - exitAlpha);
 
   // Travelling route indicator during decision turn: s4 0.22 to 0.65
@@ -389,7 +389,7 @@ function PathwaysSection() {
   const clarityHoldAlpha = smoothStep(0.82, 0.98, s4);
 
   return (
-    <section className="relative min-h-[85vh] flex flex-col justify-center items-center text-center px-4 sm:px-6 lg:px-8 z-10 py-24 select-none pointer-events-none">
+    <section id="chapter-pathways" className="relative min-h-screen flex flex-col justify-center items-center text-center px-4 sm:px-6 lg:px-8 z-10 py-24 select-none pointer-events-none">
       <div
         className="max-w-4xl mx-auto space-y-6 pointer-events-auto will-change-transform"
         style={{
