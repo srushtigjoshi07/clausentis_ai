@@ -76,41 +76,6 @@
   --sidebar-ring: #111111;
 }
 
-[data-theme="dark"], .dark {
-  --background: #0A0A0A;
-  --foreground: #F5F5F5;
-  --surface: #141414;
-  --surface-secondary: #1A1A1A;
-  --border: #262626;
-  --muted: #888888;
-  --muted-foreground: #AAAAAA;
-  --accent: #E5E5E5;
-  --accent-foreground: #0A0A0A;
-  --success: #E5E5E5;
-  --warning: #CCCCCC;
-  --danger: #FFFFFF;
-
-  --card: #141414;
-  --card-foreground: #F5F5F5;
-  --popover: #141414;
-  --popover-foreground: #F5F5F5;
-  --primary: #FFFFFF;
-  --primary-foreground: #0A0A0A;
-  --secondary: #1A1A1A;
-  --secondary-foreground: #CCCCCC;
-  --destructive: #FFFFFF;
-  --input: #262626;
-  --ring: #FFFFFF;
-  --radius: 0.5rem;
-  --sidebar: #141414;
-  --sidebar-foreground: #F5F5F5;
-  --sidebar-primary: #FFFFFF;
-  --sidebar-primary-foreground: #0A0A0A;
-  --sidebar-accent: #222222;
-  --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #262626;
-  --sidebar-ring: #FFFFFF;
-}
 
 @layer base {
   * {

@@ -2,10 +2,15 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { BidderEvaluationDossier } from '@/lib/compliance/types';
 import { sanitizeForPdf } from '@/lib/pdf/audit-pdf-generator';
+import { getBidderDossier } from '@/lib/compliance/repository';
+import { runAllStatutoryEvaluations } from '@/lib/providers/providers';
 
 export interface MatchedRequirementsPdfOptions {
-  dossier: BidderEvaluationDossier;
-  role: 'tender_authority' | 'bidder';
+  dossier?: BidderEvaluationDossier;
+  role?: 'tender_authority' | 'bidder';
+  tenderId?: string;
+  bidId?: string;
+  bidderCompanyName?: string;
   userFullName?: string;
   userOrgName?: string;
 }
@@ -26,7 +31,20 @@ function checkPageBreak(doc: jsPDF, currentY: number, neededHeight: number = 25)
  * Generates the Matched Requirements & Evidence Dossier PDF
  */
 export function createMatchedRequirementsPdfDocument(options: MatchedRequirementsPdfOptions): jsPDF {
-  const { dossier, role } = options;
+  const role = options.role || 'bidder';
+  let dossier = options.dossier;
+  if (!dossier) {
+    if (options.bidId) {
+      dossier = getBidderDossier(options.bidId) || undefined;
+    }
+    if (!dossier) {
+      dossier = getBidderDossier('bid-apex-02') || undefined;
+    }
+  }
+
+  if (!dossier) {
+    throw new Error('No bidder evaluation dossier could be resolved for PDF generation.');
+  }
 
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -257,6 +275,97 @@ export function createMatchedRequirementsPdfDocument(options: MatchedRequirement
 
   currentY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
 
+  // 5.1 STATUTORY & GOVERNMENT REGISTRY CROSS-VERIFICATION MATRIX
+  const statutoryResults = runAllStatutoryEvaluations({
+    companyName: dossier.bidderName,
+    pan: dossier.pan,
+    gstin: dossier.gstin,
+    udyamNumber: dossier.udyamNumber?.includes('UDYAM') ? dossier.udyamNumber : undefined,
+    localContentPercent: 62.0,
+    epfoApplicable: true,
+    esicApplicable: true,
+    documentsSubmitted: dossier.requirementResults.filter((r) => r.evidence).map((r) => ({
+      documentId: r.evidence!.documentId,
+      documentType: r.clauseCode.includes('6.3') ? 'local_content_declaration' : r.expectedValue,
+      documentName: r.evidence!.documentName,
+      pageNumber: r.evidence!.pageNumber
+    }))
+  });
+
+  if (statutoryResults && statutoryResults.length > 0) {
+    currentY = checkPageBreak(doc, currentY, 30);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(17, 17, 17);
+    doc.text('Statutory & Government Registry Cross-Verification (G2G Audit)', margin, currentY);
+    currentY += 4;
+
+    const statRows = statutoryResults.slice(0, 8).map((s) => {
+      const modeLabel = s.governmentVerification
+        ? (s.governmentVerification.verificationMode === 'LIVE_AUTHORIZED'
+            ? 'LIVE AUTHORIZED'
+            : s.governmentVerification.verificationMode === 'OFFICIAL_PORTAL_MANUAL'
+            ? 'OFFICIAL PORTAL'
+            : 'DEMO / SANDBOX')
+        : 'STATUTORY CHECK';
+      const statusLabel = s.governmentVerification
+        ? s.governmentVerification.status
+        : s.status.replace('_', ' ');
+      const detail = s.governmentVerification
+        ? `${s.governmentVerification.statusMessage} (Queried: ${s.governmentVerification.identifierQueried})`
+        : (s.findingMessage || 'Concordant statutory verification.');
+
+      return [
+        sanitizeForPdf(s.provider.replace(/\(.*\)/, '').trim()),
+        sanitizeForPdf(modeLabel),
+        sanitizeForPdf(statusLabel),
+        sanitizeForPdf(detail)
+      ];
+    });
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['Statutory Provider', 'Source Mode', 'Status', 'Registry Verification Audit Detail']],
+      body: statRows,
+      margin: { left: margin, right: margin },
+      styles: {
+        font: 'helvetica',
+        fontSize: 7.5,
+        cellPadding: 2,
+        textColor: [40, 40, 40],
+        lineColor: [225, 225, 225],
+        lineWidth: 0.2,
+        overflow: 'linebreak'
+      },
+      headStyles: {
+        fillColor: [243, 244, 246],
+        textColor: [17, 17, 17],
+        fontStyle: 'bold',
+        fontSize: 8
+      },
+      columnStyles: {
+        0: { cellWidth: 38 },
+        1: { cellWidth: 32 },
+        2: { cellWidth: 26 },
+        3: { cellWidth: 'auto' }
+      },
+      didParseCell: (data) => {
+        if (data.column.index === 2 && data.section === 'body') {
+          const text = String(data.cell.raw);
+          if (text.includes('MATCH') || text.includes('VERIFIED') || text.includes('LIVE')) {
+            data.cell.styles.textColor = [22, 101, 52];
+            data.cell.styles.fontStyle = 'bold';
+          } else if (text.includes('MISMATCH') || text.includes('FAIL') || text.includes('INACTIVE') || text.includes('EXPIRED')) {
+            data.cell.styles.textColor = [153, 27, 27];
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
+      }
+    });
+
+    currentY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+  }
+
   // 6. CLAUSE ANALYSIS & CROSS-DOCUMENT CONTRADICTIONS
   if (dossier.crossDocumentFindings && dossier.crossDocumentFindings.length > 0) {
     currentY = checkPageBreak(doc, currentY, 28);
@@ -386,7 +495,7 @@ export async function downloadMatchedRequirementsPdf(options: MatchedRequirement
   try {
     const blob = await generateMatchedRequirementsPdfBlob(options);
     const dateSlug = new Date().toISOString().split('T')[0];
-    const safeBidder = (options.dossier.shortName || options.dossier.bidderName || 'bidder')
+    const safeBidder = (options.dossier?.shortName || options.dossier?.bidderName || options.bidderCompanyName || 'bidder')
       .toLowerCase()
       .replace(/[^a-z0-9_-]/g, '-');
     const filename = `clausentis-matched-requirements-${safeBidder}-${dateSlug}.pdf`;

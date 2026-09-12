@@ -1027,6 +1027,17 @@ export function getBidderDossier(bidId: string): BidderEvaluationDossier | null 
 }
 
 /**
+ * Registers a newly submitted bidder evaluation dossier into the live in-memory store
+ */
+export function registerSubmittedBidDossier(dossier: BidderEvaluationDossier): void {
+  initializeCanonicalScenarios();
+  IN_MEMORY_DOSSIERS.set(dossier.bidId, dossier);
+  if (dossier.submissionId) {
+    IN_MEMORY_DOSSIERS.set(dossier.submissionId, dossier);
+  }
+}
+
+/**
  * Retrieves genuine audit trail events for a specific bidder dossier
  */
 export function getBidderAuditTrail(bidId: string) {

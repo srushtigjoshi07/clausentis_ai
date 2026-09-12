@@ -63,6 +63,46 @@ export interface ProviderVerificationResult {
   sourcePage?: number;
 }
 
+export type GovernmentVerificationMode =
+  | 'DEMO_SANDBOX'
+  | 'OFFICIAL_PORTAL_MANUAL'
+  | 'LIVE_AUTHORIZED';
+
+export type GovernmentRecordVerificationStatus =
+  | 'MATCH'
+  | 'MISMATCH'
+  | 'NOT_FOUND'
+  | 'INACTIVE'
+  | 'EXPIRED'
+  | 'UNABLE_TO_VERIFY'
+  | 'PENDING'
+  | 'ERROR';
+
+export interface FieldComparisonResult {
+  fieldName: string;
+  fieldLabel: string;
+  submittedValue: string | null;
+  governmentValue: string | null;
+  status: 'MATCH' | 'MISMATCH' | 'NOT_AVAILABLE';
+  isKeyField?: boolean;
+}
+
+export interface GovernmentRecordComparisonResult {
+  providerId: StatutoryProviderId;
+  providerName: string;
+  verificationMode: GovernmentVerificationMode;
+  status: GovernmentRecordVerificationStatus;
+  identifierQueried: string;
+  statusMessage: string;
+  fieldComparisons: FieldComparisonResult[];
+  matchedFields: string[];
+  mismatchedFields: string[];
+  verifiedAt: string;
+  sourceReference: string;
+  governmentRecord?: Record<string, unknown>;
+  submittedRecord?: Record<string, unknown>;
+}
+
 export interface NormalizedVerificationResult {
   provider: string;
   providerId: StatutoryProviderId;
@@ -79,6 +119,7 @@ export interface NormalizedVerificationResult {
   confidence: number;
   manual_review_required: boolean;
   findingMessage?: string;
+  governmentVerification?: GovernmentRecordComparisonResult;
 }
 
 export interface StatutoryVerificationRequest {
@@ -92,6 +133,8 @@ export interface StatutoryVerificationRequest {
   oemManufacturer?: string;
   epfoApplicable?: boolean;
   esicApplicable?: boolean;
+  verificationMode?: GovernmentVerificationMode;
+  evaluationDate?: string;
   documentsSubmitted?: Array<{
     documentId: string;
     documentType: string;
@@ -107,3 +150,4 @@ export interface IStatutoryProvider {
   name: string;
   verify(context: StatutoryVerificationRequest, tenderRequirement?: unknown): NormalizedVerificationResult;
 }
+

@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { Manrope } from 'next/font/google';
 import './globals.css';
-import { ThemeProvider } from '@/components/theme/theme-provider';
 
 const manrope = Manrope({
   variable: '--font-sans',
@@ -32,11 +31,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${manrope.variable} h-full antialiased font-sans`}>
       <body className="min-h-full flex flex-col font-sans bg-background text-foreground antialiased relative">
-        <ThemeProvider>
-          <div className="relative z-10 flex-1 flex flex-col">
-            {children}
-          </div>
-        </ThemeProvider>
+        <div className="relative z-10 flex-1 flex flex-col">
+          {children}
+        </div>
       </body>
     </html>
   );

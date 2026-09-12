@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
 import { logout } from '@/app/auth/actions';
-import { LanguageSelector } from '@/components/layout/language-selector';
-import { User, Mail, Globe, Lock, LogOut, Cpu, CheckCircle2, AlertCircle } from 'lucide-react';
+import { User, Mail, Lock, LogOut, Cpu, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -18,17 +17,19 @@ export default async function SettingsPage() {
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-12 font-sans">
       {/* Header */}
-      <div className="border-b border-[#E5E5E5] pb-6 pt-2">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-[#777777]">
-            SYSTEM CONFIGURATION
+      <div className="border-b border-[#E5E5E5] pb-6">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-[#111111] bg-[#F5F5F5] px-2 py-0.5 rounded border border-[#E5E5E5]">
+            Account &amp; Security
           </span>
+          <span className="text-[#E5E5E5]">&bull;</span>
+          <span className="text-xs text-[#555555] font-light">Preferences</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-light tracking-tight text-[#111111]">
-          Account &amp; Preferences
+        <h1 className="text-2xl sm:text-3xl font-normal tracking-tight text-[#111111]">
+          Settings
         </h1>
-        <p className="text-sm text-[#555555] mt-1.5">
-          Manage your authenticated identity, regional language preferences, AI engine credentials, and security.
+        <p className="text-sm font-light text-[#555555] mt-1">
+          Manage your authenticated identity, AI engine credentials, and security.
         </p>
       </div>
 
@@ -108,22 +109,7 @@ export default async function SettingsPage() {
           </div>
         </div>
 
-        {/* 3. Language & Regional Settings */}
-        <div className="rounded-xl border border-[#E5E5E5] bg-white p-6 space-y-4">
-          <div className="border-b border-[#E5E5E5] pb-3">
-            <h3 className="text-sm sm:text-base font-semibold text-[#111111] uppercase tracking-wide flex items-center gap-2">
-              <Globe className="h-4 w-4 text-[#555555] stroke-[1.5]" /> Regional Localization
-            </h3>
-            <p className="text-xs text-[#555555] mt-0.5">
-              Select your primary regional language for tender summaries, alerts, and report translation.
-            </p>
-          </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-[#111111]">Interface Language</span>
-            <LanguageSelector />
-          </div>
-        </div>
 
         {/* 4. Security & Sign Out Card */}
         <div className="rounded-xl border border-[#E5E5E5] bg-white p-6 space-y-4">

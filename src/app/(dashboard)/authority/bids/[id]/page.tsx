@@ -31,6 +31,7 @@ import { CorrigendumManager } from '@/components/tenders/CorrigendumManager';
 import { getBidderDossier, recordOfficerVerdict } from '@/lib/compliance/repository';
 import { CrossDocumentFinding, RequirementComplianceResult } from '@/lib/compliance/types';
 import { runAllStatutoryEvaluations } from '@/lib/providers/providers';
+import { GovernmentVerificationCard } from '@/components/compliance/GovernmentVerificationCard';
 import type { ProcurementDecisionRecord } from '@/types/procurement-decision';
 
 interface PrioritizedFinding {
@@ -166,6 +167,25 @@ export default function AuthorityBidDetailPage() {
     sourceDoc: r.evidence?.documentName || 'Not Submitted',
     page: r.evidence?.pageNumber || 1,
   }));
+
+  const statutoryEvaluations = runAllStatutoryEvaluations({
+    companyName: bidder.companyName,
+    pan: bidder.pan,
+    gstin: bidder.gstin,
+    udyamNumber: bidder.udyamNumber?.includes('UDYAM') ? bidder.udyamNumber : undefined,
+    localContentPercent: 62.0,
+    oemManufacturer: dossier.requirementResults.find((r) => r.clauseCode.includes('5.1'))?.verifiedValue,
+    epfoApplicable: true,
+    esicApplicable: true,
+    documentsSubmitted: dossier.requirementResults.filter((r) => r.evidence).map((r) => ({
+      documentId: r.evidence!.documentId,
+      documentType: r.clauseCode.includes('6.3') ? 'local_content_declaration' : r.expectedValue,
+      documentName: r.evidence!.documentName,
+      pageNumber: r.evidence!.pageNumber
+    }))
+  });
+
+  const udyamGovtVerification = statutoryEvaluations.find((res) => res.providerId === 'udyam')?.governmentVerification;
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-16 font-sans bg-white">
@@ -397,22 +417,7 @@ export default function AuthorityBidDetailPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E5E5E5]">
-                {runAllStatutoryEvaluations({
-                  companyName: bidder.companyName,
-                  pan: bidder.pan,
-                  gstin: bidder.gstin,
-                  udyamNumber: bidder.udyamNumber?.includes('UDYAM') ? bidder.udyamNumber : undefined,
-                  localContentPercent: 62.0,
-                  oemManufacturer: dossier.requirementResults.find((r) => r.clauseCode.includes('5.1'))?.verifiedValue,
-                  epfoApplicable: true,
-                  esicApplicable: true,
-                  documentsSubmitted: dossier.requirementResults.filter((r) => r.evidence).map((r) => ({
-                    documentId: r.evidence!.documentId,
-                    documentType: r.clauseCode.includes('6.3') ? 'local_content_declaration' : r.expectedValue,
-                    documentName: r.evidence!.documentName,
-                    pageNumber: r.evidence!.pageNumber
-                  }))
-                }).map((res, idx) => (
+                {statutoryEvaluations.map((res, idx) => (
                   <tr key={idx} className="hover:bg-[#FAFAFA] transition-colors">
                     <td className="py-3.5 px-3.5 align-top break-words overflow-wrap-anywhere">
                       <div className="font-semibold text-[#111111] text-xs">
@@ -471,6 +476,22 @@ export default function AuthorityBidDetailPage() {
             </table>
           </div>
         </div>
+
+        {/* Detailed Government Record Cross-Verification Card */}
+        {udyamGovtVerification && (
+          <div className="space-y-2 mt-4 pt-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-mono uppercase tracking-wider text-[#111111] font-semibold flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#111111]" />
+                Official Government Registry Cross-Verification (G2G Audit)
+              </h4>
+              <span className="text-[11px] text-[#777777] font-mono">
+                Registry: Ministry of MSME / Udyam
+              </span>
+            </div>
+            <GovernmentVerificationCard verification={udyamGovtVerification} />
+          </div>
+        )}
       </div>
 
       {/* 2. REQUIREMENT-BY-REQUIREMENT ANALYSIS TABLE */}

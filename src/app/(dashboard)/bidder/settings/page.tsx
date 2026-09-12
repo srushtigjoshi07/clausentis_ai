@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
 import { logout } from '@/app/auth/actions';
-import { LanguageSelector } from '@/components/layout/language-selector';
-import { User, Mail, Globe, Lock, LogOut, Cpu, CheckCircle2, AlertCircle, Building2, Briefcase } from 'lucide-react';
+import { User, Mail, Lock, LogOut, Cpu, CheckCircle2, AlertCircle, Building2, Briefcase } from 'lucide-react';
 
 export const metadata = {
   title: 'Settings - Clausentis Bidder Portal',
@@ -35,7 +34,7 @@ export default async function BidderSettingsPage() {
           Settings &amp; Company Profile
         </h1>
         <p className="text-xs sm:text-sm text-[#555555] mt-1">
-          Manage your verified enterprise credentials, regional language preferences, AI engine credentials, and security.
+          Manage your verified enterprise credentials, AI engine credentials, and security.
         </p>
       </div>
 
@@ -138,22 +137,7 @@ export default async function BidderSettingsPage() {
           </p>
         </div>
 
-        {/* 4. Language & Regional Settings */}
-        <div className="rounded-xl border border-[#E5E5E5] bg-white p-5 space-y-3 shadow-2xs">
-          <div className="border-b border-[#E5E5E5] pb-3">
-            <h3 className="text-xs font-mono uppercase tracking-wider font-semibold text-[#111111] flex items-center gap-2">
-              <Globe className="h-4 w-4 text-[#111111]" /> Interface Localization
-            </h3>
-            <p className="text-xs text-[#555555] mt-0.5">
-              Select your primary regional language for tender summaries, alerts, and report translation.
-            </p>
-          </div>
 
-          <div className="flex items-center justify-between pt-1">
-            <span className="text-xs text-[#111111] font-medium">Language</span>
-            <LanguageSelector />
-          </div>
-        </div>
 
         {/* 5. Security & Sign Out Card */}
         <div className="rounded-xl border border-[#E5E5E5] bg-white p-5 space-y-4 shadow-2xs">

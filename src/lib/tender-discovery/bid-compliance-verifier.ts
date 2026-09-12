@@ -19,6 +19,8 @@ import type {
   CrossDocumentMismatch,
   DiscoveredTender,
 } from '@/types/tender-discovery';
+import { UdyamProvider } from '@/lib/providers/providers';
+import type { GovernmentRecordComparisonResult } from '@/lib/providers/types';
 
 export function runBidComplianceEvaluation(
   tender: DiscoveredTender,
@@ -30,9 +32,25 @@ export function runBidComplianceEvaluation(
   const criticalFindings: CriticalFindingItem[] = [];
   const crossDocumentMismatches: CrossDocumentMismatch[] = [];
 
-  // Helper document finders
-  const hasDocType = (type: string) => documents.some((d) => d.documentType === type);
-  const getDoc = (type: string) => documents.find((d) => d.documentType === type);
+  // Helper document finders (checks documentType first, with fallback to filename signals)
+  const getDoc = (type: string) => {
+    const direct = documents.find((d) => d.documentType === type);
+    if (direct) return direct;
+    return documents.find((d) => {
+      const name = (d.fileName || '').toLowerCase();
+      if (type === 'audited_financials' && (name.includes('financial') || name.includes('turnover') || name.includes('balance_sheet'))) return true;
+      if (type === 'experience_certificate' && (name.includes('experience') || name.includes('completion') || name.includes('past_performance') || name.includes('work_order'))) return true;
+      if (type === 'gst_certificate' && (name.includes('gst') || name.includes('reg06') || name.includes('reg-06'))) return true;
+      if (type === 'pan_card' && name.includes('pan') && !name.includes('company_profile')) return true;
+      if (type === 'non_blacklisting_declaration' && (name.includes('blacklisting') || name.includes('debarment') || name.includes('annexure_b') || name.includes('affidavit'))) return true;
+      if (type === 'local_content_declaration' && (name.includes('local_content') || name.includes('make_in_india'))) return true;
+      if (type === 'technical_compliance' && (name.includes('technical_compliance') || name.includes('datasheet') || name.includes('deviation'))) return true;
+      if (type === 'emd_proof' && (name.includes('emd') || name.includes('bank_guarantee') || name.includes('security'))) return true;
+      if (type === 'udyam_certificate' && (name.includes('udyam') || name.includes('msme'))) return true;
+      return false;
+    });
+  };
+  const hasDocType = (type: string) => Boolean(getDoc(type));
 
   const finDoc = getDoc('audited_financials');
   const expDoc = getDoc('experience_certificate');
@@ -42,6 +60,7 @@ export function runBidComplianceEvaluation(
   const localContentDoc = getDoc('local_content_declaration');
   const techDoc = getDoc('technical_compliance');
   const emdDoc = getDoc('emd_proof');
+  const udyamDoc = getDoc('udyam_certificate');
 
   // ─────────────────────────────────────────────────────────────
   // 1. FINANCIAL REQUIREMENTS
@@ -49,11 +68,13 @@ export function runBidComplianceEvaluation(
   const minTurnoverRequired = tender.minimumTurnoverRequired || 10.0; // in Crores
   let bidderTurnover = 0;
   let declaredTurnover = 0;
+  let turnoverSourcePage = 4;
 
   if (finDoc) {
-    const facts = finDoc.extractedFacts as { turnover?: number; declaredTurnover?: number } | undefined;
-    bidderTurnover = facts?.turnover ?? 8.72; // Default realistic flawed amount if not explicitly supplied
-    declaredTurnover = facts?.declaredTurnover ?? bidderTurnover;
+    const facts = finDoc.extractedFacts as { turnover?: number; declaredTurnover?: number; turnoverPage?: number; netWorth?: number } | undefined;
+    bidderTurnover = typeof facts?.turnover === 'number' ? facts.turnover : 8.72;
+    declaredTurnover = typeof facts?.declaredTurnover === 'number' ? facts.declaredTurnover : bidderTurnover;
+    if (facts?.turnoverPage) turnoverSourcePage = facts.turnoverPage;
   }
 
   // Check 1A: Minimum Annual Turnover Threshold (Deterministic)
@@ -94,7 +115,7 @@ export function runBidComplianceEvaluation(
       confidence: 98,
       riskLevel: 'LOW',
       sourceDocument: finDoc.fileName,
-      sourcePage: 4,
+      sourcePage: turnoverSourcePage,
       isMandatory: true,
     });
   } else {
@@ -109,7 +130,7 @@ export function runBidComplianceEvaluation(
       confidence: 98,
       riskLevel: 'HIGH',
       sourceDocument: finDoc.fileName,
-      sourcePage: 17,
+      sourcePage: turnoverSourcePage,
       failureReason: `Turnover deficit of ₹${(minTurnoverRequired - bidderTurnover).toFixed(2)} Crore against mandatory threshold.`,
       remediationAction: 'Provide consolidated group balance sheets or qualifying joint venture audit certificates if permitted under tender terms.',
       isMandatory: true,
@@ -120,7 +141,7 @@ export function runBidComplianceEvaluation(
       required: `₹${minTurnoverRequired.toFixed(2)} Crore`,
       evidence: `₹${bidderTurnover.toFixed(2)} Crore`,
       source: finDoc.fileName,
-      page: 17,
+      page: turnoverSourcePage,
       status: 'FAIL',
       remediation: `Turnover falls short by ₹${(minTurnoverRequired - bidderTurnover).toFixed(2)} Cr. Supplementary qualified consortium audit required.`,
     });
@@ -128,18 +149,20 @@ export function runBidComplianceEvaluation(
 
   // Check 1B: Positive Net Worth Requirement
   if (finDoc) {
+    const netWorth = (finDoc.extractedFacts as { netWorth?: number } | undefined)?.netWorth ?? 4.2;
+    const isNetWorthPositive = netWorth > 0;
     matrix.push({
       id: 'req-fin-02',
       requirementTitle: 'Positive Net Worth',
       category: 'Financial',
       tenderClauseReference: 'NIT Section 3.3 • Net Worth Criteria',
       requiredCriteria: 'The net worth of the bidder must be positive as on the close of the immediately preceding financial year.',
-      bidderEvidence: 'Audited net worth verified as positive (+₹4.20 Crore).',
-      status: 'PASS',
+      bidderEvidence: `Audited net worth verified as ${isNetWorthPositive ? 'positive' : 'negative'} (${isNetWorthPositive ? '+' : ''}₹${netWorth.toFixed(2)} Crore).`,
+      status: isNetWorthPositive ? 'PASS' : 'FAIL',
       confidence: 96,
-      riskLevel: 'LOW',
+      riskLevel: isNetWorthPositive ? 'LOW' : 'HIGH',
       sourceDocument: finDoc.fileName,
-      sourcePage: 6,
+      sourcePage: turnoverSourcePage + 2,
       isMandatory: true,
     });
   }
@@ -152,11 +175,13 @@ export function runBidComplianceEvaluation(
 
   let bidderExpYears = 0;
   let bidderProjectsCount = 0;
+  let expSourcePage = 2;
 
   if (expDoc) {
-    const facts = expDoc.extractedFacts as { experienceYears?: number; completedProjects?: number } | undefined;
-    bidderExpYears = facts?.experienceYears ?? 7;
-    bidderProjectsCount = facts?.completedProjects ?? 3;
+    const facts = expDoc.extractedFacts as { experienceYears?: number; completedProjects?: number; experiencePage?: number } | undefined;
+    bidderExpYears = typeof facts?.experienceYears === 'number' ? facts.experienceYears : 7;
+    bidderProjectsCount = typeof facts?.completedProjects === 'number' ? facts.completedProjects : 3;
+    if (facts?.experiencePage) expSourcePage = facts.experiencePage;
   }
 
   // Check 2A: Years in Similar Line of Business
@@ -188,7 +213,7 @@ export function runBidComplianceEvaluation(
       confidence: 96,
       riskLevel: 'LOW',
       sourceDocument: expDoc.fileName,
-      sourcePage: 2,
+      sourcePage: expSourcePage,
       isMandatory: true,
     });
   } else {
@@ -203,10 +228,20 @@ export function runBidComplianceEvaluation(
       confidence: 95,
       riskLevel: 'HIGH',
       sourceDocument: expDoc.fileName,
-      sourcePage: 3,
+      sourcePage: expSourcePage,
       failureReason: 'Experience period is shorter than tender stipulation.',
       remediationAction: 'Submit earlier incorporation orders or predecessor credentials.',
       isMandatory: true,
+    });
+    criticalFindings.push({
+      id: 'crit-tech-exp-fail',
+      title: 'Insufficient Technical Experience Standing',
+      required: `Minimum ${minExpYears} years standing`,
+      evidence: `${bidderExpYears} years documented`,
+      source: expDoc.fileName,
+      page: expSourcePage,
+      status: 'FAIL',
+      remediation: 'Submit additional earlier work order completion certificates.',
     });
   }
 
@@ -223,27 +258,45 @@ export function runBidComplianceEvaluation(
       confidence: 94,
       riskLevel: bidderProjectsCount >= similarProjectsReq ? 'LOW' : 'HIGH',
       sourceDocument: expDoc.fileName,
-      sourcePage: 5,
+      sourcePage: expSourcePage + 1,
       isMandatory: true,
     });
   }
 
   // Check 2C: Technical Specification Compliance
   if (techDoc) {
+    const techFacts = techDoc.extractedFacts as { isCompliant?: boolean; deviationsCount?: number } | undefined;
+    const isTechPassed = techFacts?.isCompliant !== false && !(typeof techFacts?.deviationsCount === 'number' && techFacts.deviationsCount > 0);
     matrix.push({
       id: 'req-tech-03',
       requirementTitle: 'Technical Specification Conformance',
       category: 'Technical',
       tenderClauseReference: 'Technical Specification Section 2',
       requiredCriteria: 'Unconditional compliance to tender technical parameters, datasheets, and scope of work.',
-      bidderEvidence: 'Technical deviation schedule submitted with zero deviations declared.',
-      status: 'PASS',
+      bidderEvidence: isTechPassed
+        ? 'Technical deviation schedule submitted with zero deviations declared.'
+        : 'Technical datasheet indicates deficient parameters / unapproved deviation.',
+      status: isTechPassed ? 'PASS' : 'FAIL',
       confidence: 95,
-      riskLevel: 'LOW',
+      riskLevel: isTechPassed ? 'LOW' : 'HIGH',
       sourceDocument: techDoc.fileName,
       sourcePage: 1,
+      failureReason: !isTechPassed ? 'Technical deviation from mandatory tender specifications.' : undefined,
+      remediationAction: !isTechPassed ? 'Provide OEM-backed technical deviation settlement or conforming model.' : undefined,
       isMandatory: true,
     });
+    if (!isTechPassed) {
+      criticalFindings.push({
+        id: 'crit-tech-deviation',
+        title: 'Technical Specification Deviation',
+        required: 'Zero unapproved deviations',
+        evidence: 'Deficient parameters detected in submitted datasheet',
+        source: techDoc.fileName,
+        page: 1,
+        status: 'FAIL',
+        remediation: 'Submit updated technical datasheet confirming 100% adherence to tender specifications.',
+      });
+    }
   } else {
     matrix.push({
       id: 'req-tech-03',
@@ -266,14 +319,15 @@ export function runBidComplianceEvaluation(
   // 3. LEGAL & STATUTORY REQUIREMENTS
   // ─────────────────────────────────────────────────────────────
   // Check 3A: GSTIN Registration
-  if (gstDoc && bidderProfile.gstin) {
+  const activeGstin = (gstDoc?.extractedFacts as { gstin?: string } | undefined)?.gstin || bidderProfile.gstin;
+  if (gstDoc && activeGstin) {
     matrix.push({
       id: 'req-leg-01',
       requirementTitle: 'GST Registration Certificate',
       category: 'Legal & Regulatory',
       tenderClauseReference: 'NIT Section 2 • Statutory Eligibility',
       requiredCriteria: 'Valid GSTIN registration in the State of project execution or nationwide inter-state registration.',
-      bidderEvidence: `GSTIN ${bidderProfile.gstin} verified against submitted Form REG-06. Active status confirmed.`,
+      bidderEvidence: `GSTIN ${activeGstin} verified against submitted Form REG-06. Active status confirmed.`,
       status: 'PASS',
       confidence: 99,
       riskLevel: 'LOW',
@@ -300,14 +354,15 @@ export function runBidComplianceEvaluation(
   }
 
   // Check 3B: Permanent Account Number (PAN)
-  if (panDoc && bidderProfile.pan) {
+  const activePan = (panDoc?.extractedFacts as { pan?: string } | undefined)?.pan || bidderProfile.pan;
+  if (panDoc && activePan) {
     matrix.push({
       id: 'req-leg-02',
       requirementTitle: 'Permanent Account Number (PAN)',
       category: 'Legal & Regulatory',
       tenderClauseReference: 'NIT Section 2.2 • PAN Registration',
       requiredCriteria: 'Valid PAN card issued by the Income Tax Department of India.',
-      bidderEvidence: `PAN ${bidderProfile.pan} matches company name '${bidderProfile.companyName}'.`,
+      bidderEvidence: `PAN ${activePan} verified for legal entity.`,
       status: 'PASS',
       confidence: 99,
       riskLevel: 'LOW',
@@ -381,20 +436,37 @@ export function runBidComplianceEvaluation(
 
   // Check 4B: Local Content / Make in India Declaration
   if (localContentDoc) {
+    const facts = localContentDoc.extractedFacts as { localContentPercentage?: number } | undefined;
+    const localContent = typeof facts?.localContentPercentage === 'number' ? facts.localContentPercentage : 62.5;
+    const isPass = localContent >= 50.0;
     matrix.push({
       id: 'req-dec-02',
       requirementTitle: 'Local Content (Make in India) Declaration',
       category: 'Declarations',
       tenderClauseReference: 'Public Procurement Order (MII Clause)',
       requiredCriteria: 'Self-certification indicating percentage of local content (minimum 50% for Class-I Local Supplier status).',
-      bidderEvidence: 'Declared local content: 62.5% (Class-I Local Supplier status confirmed).',
-      status: 'PASS',
+      bidderEvidence: `Declared local content: ${localContent.toFixed(1)}% (${isPass ? 'Class-I Local Supplier status confirmed' : 'Fails 50% minimum Class-I threshold'}).`,
+      status: isPass ? 'PASS' : 'FAIL',
       confidence: 96,
-      riskLevel: 'LOW',
+      riskLevel: isPass ? 'LOW' : 'HIGH',
       sourceDocument: localContentDoc.fileName,
       sourcePage: 1,
       isMandatory: true,
+      failureReason: !isPass ? `Local content of ${localContent.toFixed(1)}% is below mandatory 50% threshold.` : undefined,
+      remediationAction: !isPass ? 'Submit revised declaration with qualifying domestic value addition.' : undefined,
     });
+    if (!isPass) {
+      criticalFindings.push({
+        id: 'crit-local-content-fail',
+        title: 'Local Content Below Class-I Threshold',
+        required: 'Minimum 50% domestic local content',
+        evidence: `${localContent.toFixed(1)}% declared`,
+        source: localContentDoc.fileName,
+        page: 1,
+        status: 'FAIL',
+        remediation: 'Provide audited cost accountant local value addition certificate.',
+      });
+    }
   } else {
     matrix.push({
       id: 'req-dec-02',
@@ -413,22 +485,181 @@ export function runBidComplianceEvaluation(
     });
   }
 
-  // Check 4C: EMD Proof or Exemption
-  if (emdDoc) {
-    matrix.push({
-      id: 'req-doc-01',
-      requirementTitle: 'Earnest Money Deposit (EMD) Guarantee',
-      category: 'Documentation',
-      tenderClauseReference: 'NIT Section 1.4 • EMD Requirement',
-      requiredCriteria: `EMD proof for ${tender.emdAmount} or valid MSME/Udyam registration exemption certificate.`,
-      bidderEvidence: 'Bank Guarantee / Udyam MSME Exemption Certificate verified against tender EMD terms.',
-      status: 'PASS',
-      confidence: 97,
-      riskLevel: 'LOW',
-      sourceDocument: emdDoc.fileName,
-      sourcePage: 1,
-      isMandatory: true,
-    });
+  // Check 4C: EMD Proof or Exemption with Government Record Cross-Verification
+  const effectiveEmdDoc = emdDoc || udyamDoc;
+  if (effectiveEmdDoc) {
+    const isUdyam = Boolean(udyamDoc && effectiveEmdDoc.id === udyamDoc.id);
+    const udyamFacts = udyamDoc?.extractedFacts as Record<string, unknown> | undefined;
+    const udyamNumber = (udyamFacts?.udyamNumber as string) || bidderProfile.udyamNumber;
+
+    if (isUdyam && udyamDoc && udyamNumber) {
+      // Obtain government verification result (already extracted on upload, or run on demand)
+      let govtVerif = udyamFacts?.governmentVerification as GovernmentRecordComparisonResult | undefined;
+      if (!govtVerif) {
+        const udyamProvider = new UdyamProvider();
+        const verifRes = udyamProvider.verify({
+          companyName: (udyamFacts?.enterpriseName as string) || bidderProfile.companyName,
+          udyamNumber,
+          pan: (udyamFacts?.pan as string) || bidderProfile.pan,
+          documentsSubmitted: [
+            {
+              documentId: udyamDoc.id,
+              documentType: udyamDoc.documentType,
+              documentName: udyamDoc.fileName,
+              pageNumber: 1,
+              extractedValues: udyamFacts,
+            },
+          ],
+          verificationMode: 'DEMO_SANDBOX',
+          evaluationDate: '2026-09-12',
+        });
+        govtVerif = verifRes.governmentVerification;
+      }
+
+      if (govtVerif) {
+        if (govtVerif.status === 'MATCH') {
+          matrix.push({
+            id: 'req-doc-01',
+            requirementTitle: 'Earnest Money Deposit (EMD) Guarantee',
+            category: 'Documentation',
+            tenderClauseReference: 'NIT Section 1.4 • EMD Requirement',
+            requiredCriteria: `EMD proof for ${tender.emdAmount} or valid MSME/Udyam registration exemption certificate.`,
+            bidderEvidence: `Udyam MSME Exemption Certificate (${udyamNumber}) confirmed via Government Record Cross-Verification [DEMO / SANDBOX]. Active status verified.`,
+            status: 'PASS',
+            confidence: 99,
+            riskLevel: 'LOW',
+            sourceDocument: effectiveEmdDoc.fileName,
+            sourcePage: 1,
+            isMandatory: true,
+          });
+        } else if (govtVerif.status === 'MISMATCH') {
+          const diffSummary = govtVerif.mismatchedFields.join(', ');
+          matrix.push({
+            id: 'req-doc-01',
+            requirementTitle: 'Earnest Money Deposit (EMD) Guarantee',
+            category: 'Documentation',
+            tenderClauseReference: 'NIT Section 1.4 • EMD Requirement',
+            requiredCriteria: `EMD proof for ${tender.emdAmount} or valid MSME/Udyam registration exemption certificate.`,
+            bidderEvidence: `Statutory discrepancy: Submitted Udyam certificate mismatches government registry on: ${diffSummary}.`,
+            status: 'FAIL',
+            confidence: 96,
+            riskLevel: 'HIGH',
+            sourceDocument: effectiveEmdDoc.fileName,
+            sourcePage: 1,
+            failureReason: govtVerif.statusMessage,
+            remediationAction: 'Resolve identity discrepancies with the Ministry of MSME Udyam portal and upload the concordant certificate.',
+            isMandatory: true,
+          });
+          criticalFindings.push({
+            id: 'crit-udyam-mismatch',
+            title: 'Udyam Government Record Mismatch',
+            required: 'Concordant identity across submitted Udyam certificate and government registry',
+            evidence: `Discrepancy across: ${diffSummary}`,
+            source: effectiveEmdDoc.fileName,
+            page: 1,
+            status: 'FAIL',
+            remediation: 'Update corporate filings or upload conforming Udyam registration.',
+          });
+          crossDocumentMismatches.push({
+            field: 'Udyam Government Record Alignment',
+            documentA: effectiveEmdDoc.fileName,
+            documentB: 'Ministry of MSME Registry (DEMO/SANDBOX)',
+            detectedDifference: govtVerif.statusMessage,
+            severity: 'HIGH',
+            pageRef: 'Page 1 vs Government Registry',
+            impactExplanation: 'Material identity contradiction between certificate and official database record.',
+          });
+        } else if (govtVerif.status === 'NOT_FOUND') {
+          matrix.push({
+            id: 'req-doc-01',
+            requirementTitle: 'Earnest Money Deposit (EMD) Guarantee',
+            category: 'Documentation',
+            tenderClauseReference: 'NIT Section 1.4 • EMD Requirement',
+            requiredCriteria: `EMD proof for ${tender.emdAmount} or valid MSME/Udyam registration exemption certificate.`,
+            bidderEvidence: `Government Record Not Found: ${udyamNumber} does not exist in the official Udyam database.`,
+            status: 'FAIL',
+            confidence: 98,
+            riskLevel: 'HIGH',
+            sourceDocument: effectiveEmdDoc.fileName,
+            sourcePage: 1,
+            failureReason: `Udyam registration number ${udyamNumber} could not be verified against the official MSME registry.`,
+            remediationAction: 'Submit a registered Udyam certificate or pay EMD via bank guarantee.',
+            isMandatory: true,
+          });
+          criticalFindings.push({
+            id: 'crit-udyam-notfound',
+            title: 'Udyam Registration Not Found in Registry',
+            required: 'Valid registered Udyam certificate in official portal',
+            evidence: `Registration ${udyamNumber} not found`,
+            source: effectiveEmdDoc.fileName,
+            page: 1,
+            status: 'FAIL',
+            remediation: 'Provide genuine registered MSME certificate or tender EMD deposit.',
+          });
+        } else if (govtVerif.status === 'INACTIVE' || govtVerif.status === 'EXPIRED') {
+          matrix.push({
+            id: 'req-doc-01',
+            requirementTitle: 'Earnest Money Deposit (EMD) Guarantee',
+            category: 'Documentation',
+            tenderClauseReference: 'NIT Section 1.4 • EMD Requirement',
+            requiredCriteria: `EMD proof for ${tender.emdAmount} or valid MSME/Udyam registration exemption certificate.`,
+            bidderEvidence: `Udyam certificate is ${govtVerif.status} in the official registry.`,
+            status: 'FAIL',
+            confidence: 98,
+            riskLevel: 'CRITICAL',
+            sourceDocument: effectiveEmdDoc.fileName,
+            sourcePage: 1,
+            failureReason: govtVerif.statusMessage,
+            remediationAction: 'Renew or re-activate Udyam registration with Ministry of MSME.',
+            isMandatory: true,
+          });
+          criticalFindings.push({
+            id: 'crit-udyam-inactive',
+            title: `Udyam Registration ${govtVerif.status}`,
+            required: 'Active, non-cancelled Udyam certificate',
+            evidence: govtVerif.statusMessage,
+            source: effectiveEmdDoc.fileName,
+            page: 1,
+            status: 'FAIL',
+            remediation: 'Renew registration or provide standard EMD payment instrument.',
+          });
+        } else {
+          // UNABLE_TO_VERIFY
+          matrix.push({
+            id: 'req-doc-01',
+            requirementTitle: 'Earnest Money Deposit (EMD) Guarantee',
+            category: 'Documentation',
+            tenderClauseReference: 'NIT Section 1.4 • EMD Requirement',
+            requiredCriteria: `EMD proof for ${tender.emdAmount} or valid MSME/Udyam registration exemption certificate.`,
+            bidderEvidence: `Udyam certificate attached (${udyamNumber || 'Document attached'}), but automated registry verification was inconclusive.`,
+            status: 'WARNING',
+            confidence: 85,
+            riskLevel: 'MEDIUM',
+            sourceDocument: effectiveEmdDoc.fileName,
+            sourcePage: 1,
+            failureReason: 'Unable to verify automatically against government registry — manual officer review required.',
+            remediationAction: 'Provide clear registration scan with legible QR code for manual portal inspection.',
+            isMandatory: false,
+          });
+        }
+      }
+    } else {
+      // Non-Udyam EMD instrument (Bank Guarantee / payment receipt)
+      matrix.push({
+        id: 'req-doc-01',
+        requirementTitle: 'Earnest Money Deposit (EMD) Guarantee',
+        category: 'Documentation',
+        tenderClauseReference: 'NIT Section 1.4 • EMD Requirement',
+        requiredCriteria: `EMD proof for ${tender.emdAmount} or valid MSME/Udyam registration exemption certificate.`,
+        bidderEvidence: 'Bank Guarantee / payment receipt verified against tender EMD terms.',
+        status: 'PASS',
+        confidence: 97,
+        riskLevel: 'LOW',
+        sourceDocument: effectiveEmdDoc.fileName,
+        sourcePage: 1,
+        isMandatory: true,
+      });
+    }
   } else {
     matrix.push({
       id: 'req-doc-01',
@@ -458,7 +689,7 @@ export function runBidComplianceEvaluation(
       documentB: finDoc.fileName,
       detectedDifference: `Declared: ₹${declaredTurnover.toFixed(2)} Cr vs Audited Statement: ₹${bidderTurnover.toFixed(2)} Cr`,
       severity: 'HIGH',
-      pageRef: 'Page 2 vs Page 17',
+      pageRef: `Page 2 vs Page ${turnoverSourcePage}`,
       impactExplanation: 'Material discrepancy in revenue claims across submitted tender forms could lead to bidder rejection during commercial scrutiny.',
     });
 
@@ -468,16 +699,18 @@ export function runBidComplianceEvaluation(
       required: 'Consistent turnover figures across all exhibits',
       evidence: `Undertaking declares ₹${declaredTurnover.toFixed(2)} Cr but Audited Balance Sheet reports ₹${bidderTurnover.toFixed(2)} Cr`,
       source: 'Bidder Declaration vs Financials',
-      page: 17,
+      page: turnoverSourcePage,
       status: 'HIGH_RISK',
       remediation: 'Harmonize financial figures across all tender declaration exhibits to match the audited statement.',
     });
   }
 
   // Cross-Check 5B: PAN in GSTIN verification
-  if (bidderProfile.gstin && bidderProfile.pan) {
-    const panFromGstin = bidderProfile.gstin.substring(2, 12).toUpperCase();
-    const standalonePan = bidderProfile.pan.toUpperCase();
+  const gstinForCheck = activeGstin;
+  const panForCheck = activePan;
+  if (gstinForCheck && panForCheck) {
+    const panFromGstin = gstinForCheck.substring(2, 12).toUpperCase();
+    const standalonePan = panForCheck.toUpperCase();
     if (panFromGstin !== standalonePan) {
       crossDocumentMismatches.push({
         field: 'PAN inside GSTIN Identity',
@@ -487,6 +720,16 @@ export function runBidComplianceEvaluation(
         severity: 'HIGH',
         pageRef: 'Page 1 vs Page 1',
         impactExplanation: 'Severe identity contradiction: The entity registered under GST differs from the PAN card submitted.',
+      });
+      criticalFindings.push({
+        id: 'crit-cross-pan-mismatch',
+        title: 'GSTIN Embedded PAN Mismatch',
+        required: 'Identity alignment between GSTIN and PAN card',
+        evidence: `GSTIN has ${panFromGstin} while PAN document has ${standalonePan}`,
+        source: 'GST vs PAN',
+        page: 1,
+        status: 'HIGH_RISK',
+        remediation: 'Provide statutory PAN amendment or upload the correct corporate entity GSTIN certificate.',
       });
     }
   }

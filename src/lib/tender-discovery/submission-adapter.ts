@@ -50,7 +50,8 @@ export interface SubmissionAdapter {
 
   validateSubmission(
     preparedPackage: PreparedSubmissionPackage,
-    report: BidComplianceReport
+    report: BidComplianceReport,
+    options?: { allowUnresolvedSubmission?: boolean }
   ): Promise<SubmissionValidationResult>;
 
   submitBid(
@@ -124,23 +125,38 @@ export class ClausentisPrototypeSubmissionAdapter implements SubmissionAdapter {
 
   async validateSubmission(
     preparedPackage: PreparedSubmissionPackage,
-    report: BidComplianceReport
+    report: BidComplianceReport,
+    options?: { allowUnresolvedSubmission?: boolean }
   ): Promise<SubmissionValidationResult> {
     const blockingReasons: string[] = [];
     const warnings: string[] = [];
 
+    // Structural validations (always mandatory)
+    if (!preparedPackage.bidderProfile.companyName) {
+      blockingReasons.push('Bidder company name is required.');
+    }
+    if (!preparedPackage.bidderProfile.gstin) {
+      blockingReasons.push('Bidder GSTIN is required for statutory identification.');
+    }
+
     // Gate 1: Mandatory Failures
     if (report.mandatoryFailed > 0) {
-      blockingReasons.push(
-        `${report.mandatoryFailed} mandatory requirement(s) failed evaluation thresholds.`
-      );
+      const msg = `${report.mandatoryFailed} mandatory requirement(s) failed evaluation thresholds.`;
+      if (options?.allowUnresolvedSubmission) {
+        warnings.push(msg);
+      } else {
+        blockingReasons.push(msg);
+      }
     }
 
     // Gate 2: Missing Mandatory Documents
     if (report.mandatoryMissing > 0) {
-      blockingReasons.push(
-        `${report.mandatoryMissing} mandatory required document(s) or declarations are missing.`
-      );
+      const msg = `${report.mandatoryMissing} mandatory required document(s) or declarations are missing.`;
+      if (options?.allowUnresolvedSubmission) {
+        warnings.push(msg);
+      } else {
+        blockingReasons.push(msg);
+      }
     }
 
     // Gate 3: High Severity Cross-Document Mismatches
@@ -148,23 +164,19 @@ export class ClausentisPrototypeSubmissionAdapter implements SubmissionAdapter {
       (m) => m.severity === 'HIGH'
     );
     if (highMismatches.length > 0) {
-      blockingReasons.push(
-        `Critical cross-document contradiction detected: ${highMismatches[0].field} (${highMismatches[0].detectedDifference}).`
-      );
+      const msg = `Critical cross-document contradiction detected: ${highMismatches[0].field} (${highMismatches[0].detectedDifference}).`;
+      if (options?.allowUnresolvedSubmission) {
+        warnings.push(msg);
+      } else {
+        blockingReasons.push(msg);
+      }
     }
 
-    // Warnings
+    // Advisory Warnings
     if (report.warningsCount > 0) {
       warnings.push(
         `${report.warningsCount} advisory warning(s) detected. Submission permitted but review is recommended.`
       );
-    }
-
-    if (!preparedPackage.bidderProfile.companyName) {
-      blockingReasons.push('Bidder company name is required.');
-    }
-    if (!preparedPackage.bidderProfile.gstin) {
-      blockingReasons.push('Bidder GSTIN is required for statutory identification.');
     }
 
     return {

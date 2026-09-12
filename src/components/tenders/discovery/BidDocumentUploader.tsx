@@ -16,19 +16,25 @@ import {
   AlertTriangle,
   Trash2,
   Plus,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   getDemoPassingDocuments,
   getDemoFlawedDocuments,
 } from '@/lib/tender-discovery/bid-compliance-verifier';
-import type { BidUploadedDocument } from '@/types/tender-discovery';
+import { processBidderDocumentAction } from '@/lib/actions/bid-document-processor';
+import type { BidUploadedDocument, DiscoveredTender } from '@/types/tender-discovery';
+import { getBidUploadGuidance } from '@/lib/tender-discovery/bid-upload-guidance';
+import { GovernmentVerificationCard } from '@/components/compliance/GovernmentVerificationCard';
+import type { GovernmentRecordComparisonResult } from '@/lib/providers/types';
 
 interface BidDocumentUploaderProps {
   documents: BidUploadedDocument[];
   onDocumentsChange: (docs: BidUploadedDocument[]) => void;
   onProceedToVerification: () => void;
   isVerifying?: boolean;
+  tender?: DiscoveredTender | null;
 }
 
 const DOCUMENT_TYPE_OPTIONS: { id: BidUploadedDocument['documentType']; label: string }[] = [
@@ -49,23 +55,95 @@ export function BidDocumentUploader({
   onDocumentsChange,
   onProceedToVerification,
   isVerifying = false,
+  tender = null,
 }: BidDocumentUploaderProps) {
   const [selectedType, setSelectedType] = useState<BidUploadedDocument['documentType']>('non_blacklisting_declaration');
   const [dragActive, setDragActive] = useState(false);
+  const [isProcessingFiles, setIsProcessingFiles] = useState(false);
+  const [expandedGovtDocs, setExpandedGovtDocs] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFiles = (fileList: FileList) => {
-    const newDocs: BidUploadedDocument[] = Array.from(fileList).map((file, idx) => ({
-      id: `doc-${Date.now()}-${idx}`,
+  const guidance = getBidUploadGuidance(selectedType, tender);
+
+  const handleFiles = async (fileList: FileList) => {
+    const rawFiles = Array.from(fileList);
+    if (rawFiles.length === 0) return;
+
+    setIsProcessingFiles(true);
+
+    // 1. Instantly register placeholder documents with 'processing' status
+    const initialDocs: BidUploadedDocument[] = rawFiles.map((file, idx) => ({
+      id: `doc-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
       fileName: file.name,
       documentType: selectedType,
       displayName: DOCUMENT_TYPE_OPTIONS.find((o) => o.id === selectedType)?.label || file.name,
       fileSizeBytes: file.size,
-      status: 'processed',
+      status: 'processing' as const,
       uploadedAt: new Date().toISOString(),
     }));
 
-    onDocumentsChange([...documents, ...newDocs]);
+    let currentDocs = [...documents, ...initialDocs];
+    onDocumentsChange(currentDocs);
+
+    // 2. Process each file via server action to extract text, infer tag, and extract facts
+    for (let i = 0; i < rawFiles.length; i++) {
+      const file = rawFiles[i];
+      const placeholder = initialDocs[i];
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('userTag', selectedType);
+
+        const res = await processBidderDocumentAction(formData);
+        if (res.success && res.doc) {
+          currentDocs = currentDocs.map((d) =>
+            d.id === placeholder.id
+              ? {
+                  ...res.doc!,
+                  id: placeholder.id,
+                }
+              : d
+          );
+        } else {
+          currentDocs = currentDocs.map((d) =>
+            d.id === placeholder.id
+              ? {
+                  ...d,
+                  status: 'processed' as const,
+                }
+              : d
+          );
+        }
+      } catch (err) {
+        console.warn(`[BidDocumentUploader] Processing error on ${file.name}:`, err);
+        currentDocs = currentDocs.map((d) =>
+          d.id === placeholder.id
+            ? {
+                ...d,
+                status: 'processed' as const,
+              }
+            : d
+        );
+      }
+      onDocumentsChange([...currentDocs]);
+    }
+
+    setIsProcessingFiles(false);
+  };
+
+  const handleUpdateDocType = (id: string, newType: BidUploadedDocument['documentType']) => {
+    const updated = documents.map((d) => {
+      if (d.id === id) {
+        return {
+          ...d,
+          documentType: newType,
+          displayName: DOCUMENT_TYPE_OPTIONS.find((o) => o.id === newType)?.label || d.fileName,
+        };
+      }
+      return d;
+    });
+    onDocumentsChange(updated);
   };
 
   const handleRemoveDoc = (id: string) => {
@@ -169,29 +247,86 @@ export function BidDocumentUploader({
           Supported formats: PDF, DOCX, XLSX. Maximum 50MB per file.
         </p>
 
-        {/* Credential Category Selector for Manual File Additions */}
-        <div className="max-w-md mx-auto flex flex-col sm:flex-row items-center gap-2">
-          <select
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value as BidUploadedDocument['documentType'])}
-            className="w-full text-xs rounded-md border border-[#E5E5E5] bg-white px-3 py-2 text-[#111111] focus:border-[#111111] focus:outline-none cursor-pointer"
-          >
-            {DOCUMENT_TYPE_OPTIONS.map((opt) => (
-              <option key={opt.id} value={opt.id} className="bg-white text-[#111111]">
-                Tag: {opt.label}
-              </option>
-            ))}
-          </select>
+        {/* Credential Category Selector & Contextual Guidance Panel */}
+        <div className="max-w-xl mx-auto space-y-3">
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <div className="relative flex-1 w-full">
+              <select
+                id="bidder-doc-tag-select"
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value as BidUploadedDocument['documentType'])}
+                className="w-full text-xs rounded-md border border-[#E5E5E5] bg-white px-3 py-2 text-[#111111] focus:border-[#111111] focus:outline-none cursor-pointer"
+              >
+                {DOCUMENT_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id} className="bg-white text-[#111111]">
+                    Tag: {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full sm:w-auto h-8 px-4 bg-[#111111] hover:bg-[#222222] text-white text-xs gap-1.5 shrink-0 rounded-md cursor-pointer"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Select File</span>
-          </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full sm:w-auto h-8 px-4 bg-[#111111] hover:bg-[#222222] text-white text-xs gap-1.5 shrink-0 rounded-md cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Select File</span>
+            </Button>
+          </div>
+
+          {/* Compact Contextual Guidance: What to Submit */}
+          {guidance && (
+            <div
+              id="bidder-upload-guidance-panel"
+              className="rounded-lg border border-[#E5E5E5] bg-white p-4 text-left shadow-2xs space-y-3"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#F0F0F0] pb-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.14em] text-[#777777] shrink-0">
+                    WHAT TO SUBMIT
+                  </span>
+                  <span className="text-[#CCCCCC] select-none">•</span>
+                  <span className="text-xs font-semibold text-[#111111] truncate">
+                    {guidance.title}
+                  </span>
+                </div>
+                {guidance.clauseRef && (
+                  <span className="text-[10px] font-mono text-[#555555] bg-[#F7F7F7] px-2 py-0.5 rounded border border-[#E5E5E5] shrink-0">
+                    {guidance.clauseRef}
+                  </span>
+                )}
+              </div>
+
+              {guidance.purpose && (
+                <div className="text-[11px] text-[#555555] leading-relaxed">
+                  <span className="font-medium text-[#333333]">Purpose: </span>
+                  {guidance.purpose}
+                </div>
+              )}
+
+              <p className="text-xs text-[#222222] leading-relaxed">
+                {guidance.whatToSubmit}
+              </p>
+
+              {guidance.expectedEvidence && guidance.expectedEvidence.length > 0 && (
+                <div className="pt-2 border-t border-[#F5F5F5] space-y-1.5">
+                  <div className="text-[10px] font-mono font-medium uppercase tracking-wider text-[#777777]">
+                    Expected Information & Evidence:
+                  </div>
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-[#333333]">
+                    {guidance.expectedEvidence.map((item, idx) => (
+                      <li key={idx} className="flex items-start gap-1.5">
+                        <span className="text-[#777777] leading-tight select-none">•</span>
+                        <span className="leading-tight">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -208,46 +343,151 @@ export function BidDocumentUploader({
           </div>
         ) : (
           <div className="space-y-2">
-            {documents.map((doc) => (
-              <div
-                key={doc.id}
-                className="flex items-center justify-between p-3 rounded-md border border-[#E5E5E5] bg-white hover:border-[#CCCCCC] transition-colors text-xs"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-[#F7F7F7] border border-[#E5E5E5] text-[#111111]">
-                    <FileText className="h-4 w-4 stroke-[1.5]" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-medium text-[#111111] truncate max-w-sm sm:max-w-md">
-                      {doc.fileName}
-                    </div>
-                    <div className="text-[11px] text-[#555555] flex items-center gap-2">
-                      <span className="font-mono">{doc.displayName}</span>
-                      <span className="text-[#777777]">&bull;</span>
-                      <span className="text-[#777777]">
-                        {(doc.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB
-                      </span>
-                    </div>
-                  </div>
-                </div>
+            {documents.map((doc) => {
+              const govtVerif = doc.extractedFacts?.governmentVerification as GovernmentRecordComparisonResult | undefined;
+              const isExpanded = Boolean(expandedGovtDocs[doc.id]);
 
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="inline-flex items-center gap-1 text-[11px] font-mono text-[#111111] bg-[#F7F7F7] px-2 py-0.5 rounded border border-[#E5E5E5]">
-                    <CheckCircle2 className="h-3 w-3 text-[#111111]" />
-                    Processed
-                  </span>
+              return (
+                <div
+                  key={doc.id}
+                  className="p-3.5 rounded-md border border-[#E5E5E5] bg-white hover:border-[#CCCCCC] transition-colors space-y-3 text-xs"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-[#F7F7F7] border border-[#E5E5E5] text-[#111111] mt-0.5">
+                        <FileText className="h-4 w-4 stroke-[1.5]" />
+                      </div>
+                      <div className="min-w-0 space-y-1.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-[#111111] truncate max-w-sm sm:max-w-md">
+                            {doc.fileName}
+                          </span>
+                          <span className="text-[11px] text-[#777777] font-mono">
+                            ({(doc.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB)
+                          </span>
+                        </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveDoc(doc.id)}
-                    className="text-[#777777] hover:text-[#111111] p-1 transition-colors cursor-pointer"
-                    title="Remove Document"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                        {/* Inline Tag Selector */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] uppercase font-mono text-[#777777]">Classification:</span>
+                          <select
+                            value={doc.documentType}
+                            onChange={(e) => handleUpdateDocType(doc.id, e.target.value as BidUploadedDocument['documentType'])}
+                            className="text-[11px] font-mono rounded border border-[#E5E5E5] bg-[#F7F7F7] px-2 py-0.5 text-[#111111] focus:border-[#111111] focus:outline-none cursor-pointer"
+                          >
+                            {DOCUMENT_TYPE_OPTIONS.map((opt) => (
+                              <option key={opt.id} value={opt.id}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Extracted Evidence Chips */}
+                        {doc.extractedFacts && Object.keys(doc.extractedFacts).length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                            {typeof doc.extractedFacts.turnover === 'number' && (
+                              <span className="inline-flex items-center text-[10px] font-mono font-medium text-[#111111] bg-[#F0F0F0] px-1.5 py-0.5 rounded border border-[#E0E0E0]">
+                                Turnover: ₹{doc.extractedFacts.turnover.toFixed(2)} Cr {doc.extractedFacts.turnoverPage ? `(p.${doc.extractedFacts.turnoverPage})` : ''}
+                              </span>
+                            )}
+                            {typeof doc.extractedFacts.experienceYears === 'number' && (
+                              <span className="inline-flex items-center text-[10px] font-mono font-medium text-[#111111] bg-[#F0F0F0] px-1.5 py-0.5 rounded border border-[#E0E0E0]">
+                                Exp: {doc.extractedFacts.experienceYears.toFixed(1)} Yrs {doc.extractedFacts.experiencePage ? `(p.${doc.extractedFacts.experiencePage})` : ''}
+                              </span>
+                            )}
+                            {typeof doc.extractedFacts.localContentPercentage === 'number' && (
+                              <span className="inline-flex items-center text-[10px] font-mono font-medium text-[#111111] bg-[#F0F0F0] px-1.5 py-0.5 rounded border border-[#E0E0E0]">
+                                Local Content: {doc.extractedFacts.localContentPercentage}%
+                              </span>
+                            )}
+                            {typeof doc.extractedFacts.gstin === 'string' && (
+                              <span className="inline-flex items-center text-[10px] font-mono text-[#333333] bg-[#FAFAFA] px-1.5 py-0.5 rounded border border-[#E5E5E5]">
+                                GSTIN: {doc.extractedFacts.gstin}
+                              </span>
+                            )}
+                            {typeof doc.extractedFacts.pan === 'string' && (
+                              <span className="inline-flex items-center text-[10px] font-mono text-[#333333] bg-[#FAFAFA] px-1.5 py-0.5 rounded border border-[#E5E5E5]">
+                                PAN: {doc.extractedFacts.pan}
+                              </span>
+                            )}
+                            {typeof doc.extractedFacts.udyamNumber === 'string' && (
+                              <span className="inline-flex items-center text-[10px] font-mono text-[#333333] bg-[#FAFAFA] px-1.5 py-0.5 rounded border border-[#E5E5E5]">
+                                Udyam: {doc.extractedFacts.udyamNumber}
+                              </span>
+                            )}
+                            {doc.extractedFacts.isNonDebarred !== undefined && (
+                              <span className="inline-flex items-center text-[10px] font-mono text-[#111111] bg-[#F0F0F0] px-1.5 py-0.5 rounded border border-[#E0E0E0]">
+                                Non-Debarred Verified
+                              </span>
+                            )}
+                            {doc.extractedFacts.deviationsCount !== undefined && (
+                              <span className="inline-flex items-center text-[10px] font-mono text-[#111111] bg-[#F0F0F0] px-1.5 py-0.5 rounded border border-[#E0E0E0]">
+                                {doc.extractedFacts.deviationsCount === 0 ? 'Nil Deviations' : `${doc.extractedFacts.deviationsCount} Deviation(s)`}
+                              </span>
+                            )}
+                            {govtVerif && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpandedGovtDocs((prev) => ({
+                                    ...prev,
+                                    [doc.id]: !prev[doc.id],
+                                  }))
+                                }
+                                className={`inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded border cursor-pointer transition-colors ${
+                                  govtVerif.status === 'MATCH'
+                                    ? 'bg-[#F0FDF4] text-[#166534] border-[#BBF7D0] hover:bg-[#DCFCE7]'
+                                    : govtVerif.status === 'MISMATCH'
+                                    ? 'bg-[#FFFBEB] text-[#92400E] border-[#FDE68A] hover:bg-[#FEF3C7]'
+                                    : 'bg-[#FEF2F2] text-[#991B1B] border-[#FECACA] hover:bg-[#FEE2E2]'
+                                }`}
+                              >
+                                <span className="font-semibold">Govt Record:</span>
+                                <span>{govtVerif.status}</span>
+                                <span className="underline ml-0.5 text-[9px]">
+                                  {isExpanded ? 'Hide' : 'Inspect'}
+                                </span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#F5F5F5]">
+                      {doc.status === 'processing' ? (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-[#555555] bg-[#F7F7F7] px-2.5 py-1 rounded border border-[#E5E5E5]">
+                          <Loader2 className="h-3 w-3 animate-spin text-[#111111]" />
+                          Extracting Evidence...
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-mono text-[#111111] bg-[#F7F7F7] px-2.5 py-1 rounded border border-[#E5E5E5]">
+                          <CheckCircle2 className="h-3 w-3 text-[#111111]" />
+                          Processed
+                        </span>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDoc(doc.id)}
+                        className="text-[#777777] hover:text-[#111111] p-1.5 transition-colors cursor-pointer rounded hover:bg-[#F7F7F7]"
+                        title="Remove Document"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Expandable Government Verification Card */}
+                  {govtVerif && isExpanded && (
+                    <div className="pt-2 border-t border-[#EEEEEE]">
+                      <GovernmentVerificationCard verification={govtVerif} />
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

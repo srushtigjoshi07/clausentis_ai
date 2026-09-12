@@ -5,10 +5,12 @@ import { useSearchParams } from 'next/navigation';
 import { 
   Building2, 
   ArrowLeft,
+  ArrowRight,
   RefreshCw,
   Search,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  FileCheck,
 } from 'lucide-react';
 
 import { BidderWorkflowStepper } from '@/components/tenders/discovery/BidderWorkflowStepper';
@@ -171,7 +173,7 @@ function BidderTenderDiscoveryContent() {
   };
 
   // Final Submission
-  const handleConfirmSubmit = async () => {
+  const handleConfirmSubmit = async (options?: { allowUnresolvedSubmission?: boolean }) => {
     if (!selectedTender || !bidderProfile || !complianceReport) return;
 
     setIsSubmitting(true);
@@ -179,7 +181,8 @@ function BidderTenderDiscoveryContent() {
       const res = await submitBidPackageAction(
         selectedTender.id,
         bidderProfile,
-        complianceReport
+        complianceReport,
+        options
       );
 
       if (res.success && res.submission) {
@@ -188,9 +191,12 @@ function BidderTenderDiscoveryContent() {
         setCurrentStep('submission');
         setCompletedSteps(['search', 'overview', 'intake', 'verification', 'remediation', 'submission']);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (res.error) {
+        alert(res.error);
       }
     } catch (err) {
       console.error('Submission failed:', err);
+      alert('An error occurred during submission. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -324,9 +330,33 @@ function BidderTenderDiscoveryContent() {
               <div className="lg:col-span-8">
                 <BidDocumentUploader
                   documents={uploadedDocuments}
-                  onDocumentsChange={(docs: BidUploadedDocument[]) => setUploadedDocuments(docs)}
+                  onDocumentsChange={(docs: BidUploadedDocument[]) => {
+                    setUploadedDocuments(docs);
+                    if (bidderProfile) {
+                      let updated = { ...bidderProfile };
+                      let changed = false;
+                      for (const d of docs) {
+                        if (d.extractedFacts?.gstin && typeof d.extractedFacts.gstin === 'string' && (!updated.gstin || updated.gstin.startsWith('33AABCA0000'))) {
+                          updated.gstin = d.extractedFacts.gstin;
+                          changed = true;
+                        }
+                        if (d.extractedFacts?.pan && typeof d.extractedFacts.pan === 'string' && (!updated.pan || updated.pan.startsWith('AABCA0000'))) {
+                          updated.pan = d.extractedFacts.pan;
+                          changed = true;
+                        }
+                        if (d.extractedFacts?.udyamNumber && typeof d.extractedFacts.udyamNumber === 'string' && (!updated.udyamNumber || updated.udyamNumber.includes('0000000'))) {
+                          updated.udyamNumber = d.extractedFacts.udyamNumber;
+                          changed = true;
+                        }
+                      }
+                      if (changed) {
+                        setBidderProfile(updated);
+                      }
+                    }
+                  }}
                   onProceedToVerification={() => handleRunVerification(1)}
                   isVerifying={isVerifying}
+                  tender={selectedTender}
                 />
               </div>
             </div>
@@ -350,6 +380,46 @@ function BidderTenderDiscoveryContent() {
             />
 
             <BidRequirementMatrix matrix={complianceReport.matrix} />
+
+            {/* Bottom Review & Submission Action Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 rounded-lg border border-[#E5E5E5] bg-white shadow-xs">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentStep('intake');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md border border-[#E5E5E5] bg-white text-xs font-medium text-[#111111] hover:bg-[#F7F7F7] cursor-pointer transition-colors"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back / Resolve Issues</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
+                <div className="text-right hidden sm:block">
+                  <div className="text-xs font-medium text-[#111111]">
+                    {complianceReport.mandatoryPassed === complianceReport.mandatoryTotal
+                      ? '100% Mandatory Criteria Satisfied'
+                      : `${complianceReport.mandatoryFailed + complianceReport.mandatoryMissing} Criteria Unresolved`}
+                  </div>
+                  <div className="text-[11px] text-[#777777] font-mono">
+                    Score: {complianceReport.overallScore}% &bull; {complianceReport.documentsCount} Exhibits
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsSubmitModalOpen(true)}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-md bg-[#111111] hover:bg-[#222222] text-white text-xs sm:text-sm font-medium transition-colors cursor-pointer shadow-xs"
+                >
+                  <FileCheck className="w-4 h-4" />
+                  <span>Submit Bid Package</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

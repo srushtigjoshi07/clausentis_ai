@@ -2,8 +2,6 @@
 
 import { User } from '@supabase/supabase-js';
 import { usePathname } from 'next/navigation';
-import { LanguageSelector } from '@/components/layout/language-selector';
-import { ThemeToggle } from '@/components/theme/theme-toggle';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { Menu } from 'lucide-react';
 import Link from 'next/link';
@@ -60,12 +58,6 @@ export function Topbar({ user, onMenuToggle }: { user: User | null; onMenuToggle
       <div className="flex items-center gap-3 sm:gap-4">
         {/* Real-time Notifications */}
         <NotificationDropdown />
-
-        {/* Dark / Light Theme Toggle */}
-        <ThemeToggle />
-
-        {/* Global Language Selector */}
-        <LanguageSelector />
 
         {/* User Profile Badge */}
         <Link href={settingsHref} className="flex items-center gap-3 pl-3 border-l border-[#E5E5E5] group">

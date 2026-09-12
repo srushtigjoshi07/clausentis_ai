@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollProgress } from '@/components/landing/scroll-progress';
-import { MultilingualAudioPreview } from '@/components/landing/multilingual-audio-preview';
 import { ProductPreview } from '@/components/landing/product-preview';
 import { Benefits } from '@/components/landing/benefits';
 import { CtaSection } from '@/components/landing/cta-section';
@@ -516,14 +515,7 @@ export default function LandingPage() {
         <ProductPreview />
       </div>
 
-      {/* ============================================================ */}
-      {/* CHAPTER 06: MULTILINGUAL ACCESSIBILITY */}
-      {/* ============================================================ */}
-      <section className="relative py-24 border-t border-white/5 overflow-hidden bg-transparent z-10">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 relative z-10">
-          <MultilingualAudioPreview />
-        </div>
-      </section>
+
 
       {/* ============================================================ */}
       {/* CHAPTER 07: COMPETITIVE BENEFITS GRID */}

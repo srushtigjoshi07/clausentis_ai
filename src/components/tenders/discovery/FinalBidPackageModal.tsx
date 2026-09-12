@@ -17,9 +17,11 @@ import {
   X,
   FileCheck,
   ShieldCheck,
+  ShieldAlert,
   SendHorizontal,
   Loader2,
   AlertCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type {
@@ -34,7 +36,7 @@ interface FinalBidPackageModalProps {
   tender: DiscoveredTender;
   bidderProfile: BidderProfile;
   report: BidComplianceReport;
-  onConfirmSubmission: () => Promise<void>;
+  onConfirmSubmission: (options?: { allowUnresolvedSubmission?: boolean }) => Promise<void>;
   isSubmitting?: boolean;
 }
 
@@ -48,12 +50,19 @@ export function FinalBidPackageModal({
   isSubmitting = false,
 }: FinalBidPackageModalProps) {
   const [acknowledged, setAcknowledged] = useState(false);
+  const [warningAcknowledged, setWarningAcknowledged] = useState(false);
 
   if (!isOpen) return null;
 
+  const isPassed = report.mandatoryFailed === 0 && report.mandatoryMissing === 0;
+
+  const handleSubmit = () => {
+    onConfirmSubmission({ allowUnresolvedSubmission: !isPassed && warningAcknowledged });
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="w-full max-w-2xl rounded-lg border border-[#E5E5E5] bg-white shadow-2xl p-6 sm:p-8 space-y-6 font-sans">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
+      <div className="w-full max-w-2xl rounded-lg border border-[#E5E5E5] bg-white shadow-2xl p-6 sm:p-8 space-y-5 font-sans my-8">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-4">
           <div className="flex items-center gap-2.5">
@@ -79,7 +88,7 @@ export function FinalBidPackageModal({
         </div>
 
         {/* Verification Summary Manifest */}
-        <div className="grid gap-3.5 sm:grid-cols-2 text-xs">
+        <div className="grid gap-3 sm:grid-cols-2 text-xs">
           <div className="p-3.5 rounded-md bg-[#F7F7F7] border border-[#E5E5E5] space-y-1">
             <span className="text-[10px] uppercase font-mono text-[#777777] block">
               Tender Opportunity
@@ -117,14 +126,47 @@ export function FinalBidPackageModal({
               Compliance Verification Status
             </span>
             <div className="font-mono text-[#111111] font-semibold flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4" />
-              <span>PASSED ({report.overallScore}%)</span>
+              {isPassed ? (
+                <>
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>PASSED ({report.overallScore}%)</span>
+                </>
+              ) : (
+                <>
+                  <ShieldAlert className="h-4 w-4" />
+                  <span>UNRESOLVED ({report.overallScore}%)</span>
+                </>
+              )}
             </div>
             <div className="text-[11px] text-[#555555]">
-              {report.documentsCount} verified exhibits attached
+              {report.documentsCount} verified exhibits attached &bull; {report.mandatoryPassed}/{report.mandatoryTotal} mandatory criteria passed
             </div>
           </div>
         </div>
+
+        {/* Warning Banner if Package has Unresolved Mandatory Issues */}
+        {!isPassed && (
+          <div className="p-4 rounded-md border border-[#CCCCCC] bg-[#FAFAFA] space-y-2.5 text-xs">
+            <div className="flex items-center gap-2 text-[#111111] font-semibold">
+              <AlertTriangle className="h-4 w-4 text-[#111111] shrink-0" />
+              <span>Warning: Mandatory Criteria Currently Unresolved</span>
+            </div>
+            <p className="text-[11px] text-[#444444] leading-relaxed">
+              This bid package currently has {report.mandatoryFailed > 0 ? `${report.mandatoryFailed} failed` : ''} {report.mandatoryFailed > 0 && report.mandatoryMissing > 0 ? 'and' : ''} {report.mandatoryMissing > 0 ? `${report.mandatoryMissing} missing` : ''} mandatory criteria. Per public procurement rules, submitting with critical non-compliance may lead to technical disqualification.
+            </p>
+            <label className="flex items-start gap-2 pt-1 cursor-pointer select-none text-[#111111]">
+              <input
+                type="checkbox"
+                checked={warningAcknowledged}
+                onChange={(e) => setWarningAcknowledged(e.target.checked)}
+                className="mt-0.5 rounded border-[#E5E5E5] text-[#111111] focus:ring-0 cursor-pointer"
+              />
+              <span className="text-[11px] font-medium leading-snug">
+                I understand that submitting with unresolved mandatory criteria may lead to disqualification, and I wish to proceed with submission.
+              </span>
+            </label>
+          </div>
+        )}
 
         {/* Legal Disclaimer Box */}
         <div className="p-4 rounded-md border border-[#E5E5E5] bg-[#F7F7F7] text-xs space-y-2">
@@ -164,8 +206,8 @@ export function FinalBidPackageModal({
             </Button>
 
             <Button
-              disabled={!acknowledged || isSubmitting}
-              onClick={onConfirmSubmission}
+              disabled={!acknowledged || (!isPassed && !warningAcknowledged) || isSubmitting}
+              onClick={handleSubmit}
               className="w-full sm:w-auto h-10 px-6 bg-[#111111] hover:bg-[#222222] text-white font-medium text-xs sm:text-sm tracking-wide gap-2 rounded-md shadow-xs cursor-pointer transition-colors"
             >
               {isSubmitting ? (

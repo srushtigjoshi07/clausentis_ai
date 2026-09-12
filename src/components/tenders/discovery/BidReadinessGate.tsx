@@ -105,10 +105,20 @@ export function BidReadinessGate({
               <Button
                 disabled={isReverifying}
                 onClick={onRerunVerification}
-                className="w-full sm:w-auto h-10 px-6 bg-[#111111] hover:bg-[#222222] text-white font-medium text-xs sm:text-sm gap-2 shadow-xs cursor-pointer rounded-md"
+                variant="outline"
+                className="w-full sm:w-auto h-10 px-5 border-[#E5E5E5] bg-white text-[#111111] hover:bg-[#F7F7F7] text-xs sm:text-sm gap-2 cursor-pointer rounded-md"
               >
                 <RefreshCw className={`h-4 w-4 ${isReverifying ? 'animate-spin' : ''}`} />
                 <span>Re-run Verification</span>
+              </Button>
+
+              <Button
+                onClick={onProceedToFinalReview}
+                className="w-full sm:w-auto h-10 px-5 bg-[#111111] hover:bg-[#222222] text-white text-xs sm:text-sm gap-2 cursor-pointer rounded-md font-medium"
+              >
+                <FileCheck className="h-4 w-4" />
+                <span>Submit with Warnings</span>
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </>
           ) : (
@@ -118,7 +128,7 @@ export function BidReadinessGate({
               className="w-full sm:w-auto h-11 px-7 bg-[#111111] hover:bg-[#222222] text-white font-medium text-sm tracking-wide gap-2.5 rounded-md shadow-xs cursor-pointer transition-colors"
             >
               <FileCheck className="h-4 w-4" />
-              <span>Review Final Bid Package</span>
+              <span>Submit Bid Package</span>
               <ArrowRight className="h-4 w-4" />
             </Button>
           )}

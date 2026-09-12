@@ -24,8 +24,11 @@ import {
   IStatutoryProvider,
   NormalizedVerificationResult,
   StatutoryVerificationRequest,
-  StatutoryProviderId
+  StatutoryProviderId,
+  VerificationSourceStatus,
 } from './types';
+import { lookupUdyamDemoRecord } from './data/udyam-demo-records';
+import { compareUdyamRecord } from './udyam-normalizer';
 
 export interface TenderRequirementLike {
   id?: string;
@@ -53,10 +56,17 @@ export class UdyamProvider implements IStatutoryProvider {
   name = 'Ministry of MSME (Udyam Portal)';
 
   verify(req: StatutoryVerificationRequest, _tenderReq?: TenderRequirementLike): NormalizedVerificationResult {
+    const mode = req.verificationMode || 'DEMO_SANDBOX';
     const doc = req.documentsSubmitted?.find(
-      (d) => d.documentType === 'msme_certificate' || d.documentName.toLowerCase().includes('udyam')
+      (d) =>
+        d.documentType === 'msme_certificate' ||
+        d.documentType === 'udyam_certificate' ||
+        d.documentName.toLowerCase().includes('udyam')
     );
-    const udyamNum = req.udyamNumber || (doc?.extractedValues?.udyamNumber as string) || 'UDYAM-TN-02-0049182';
+    const udyamNum =
+      req.udyamNumber ||
+      (doc?.extractedValues?.udyamNumber as string) ||
+      (doc?.extractedValues?.registrationNumber as string);
 
     if (!doc && !req.udyamNumber) {
       return {
@@ -73,34 +83,69 @@ export class UdyamProvider implements IStatutoryProvider {
       };
     }
 
-    const enterpriseName = String(doc?.extractedValues?.enterpriseName || req.companyName);
-    const isNameMatch = enterpriseName.toLowerCase().includes(req.companyName.toLowerCase().split(' ')[0]);
+    const enterpriseName = String(
+      doc?.extractedValues?.enterpriseName ||
+      doc?.extractedValues?.legalName ||
+      req.companyName ||
+      ''
+    );
+    const pan = String(doc?.extractedValues?.pan || req.pan || '');
+
+    // Look up government demo record
+    const govtRecord = lookupUdyamDemoRecord(udyamNum);
+
+    // Run deterministic field-by-field comparison
+    const comparison = compareUdyamRecord(
+      {
+        udyamNumber: udyamNum,
+        enterpriseName,
+        pan,
+        status: (doc?.extractedValues?.status as string) || 'ACTIVE',
+        organisationType: (doc?.extractedValues?.organisationType as string) || 'Private Limited',
+        registrationDate: (doc?.extractedValues?.registrationDate as string) || '12-Aug-2020',
+        documentName: doc?.documentName,
+        sourcePage: doc?.pageNumber || 1,
+      },
+      govtRecord,
+      mode,
+      req.evaluationDate
+    );
+
+    const isVerified = comparison.status === 'MATCH';
+    const verificationStatus: VerificationSourceStatus =
+      comparison.status === 'MATCH'
+        ? (mode === 'LIVE_AUTHORIZED' ? 'LIVE_VERIFIED' : 'PROTOTYPE_VERIFIED')
+        : comparison.status === 'MISMATCH'
+        ? 'MANUAL_REVIEW'
+        : comparison.status === 'NOT_FOUND'
+        ? 'SOURCE_UNAVAILABLE'
+        : 'MANUAL_REVIEW';
 
     return {
       provider: this.name,
       providerId: this.id,
-      status: 'DOCUMENT_VERIFIED',
-      verified: isNameMatch,
+      status: verificationStatus,
+      verified: isVerified,
       data: {
         udyamNumber: udyamNum,
         enterpriseName,
-        orgType: 'Private Limited Company',
-        registrationDate: '12-Aug-2020',
-        classification: 'Medium Enterprise (Manufacturing)',
-        majorActivity: 'Industrial Machinery & Compressor Manufacturing'
+        pan,
+        governmentRecord: govtRecord,
+        comparisonStatus: comparison.status,
+        mismatchedFields: comparison.mismatchedFields,
+        matchedFields: comparison.matchedFields,
       },
       evidence: {
         documentName: doc?.documentName || 'Udyam_Registration_Certificate.pdf',
         pageNumber: doc?.pageNumber || 1,
-        excerpt: `Udyam Registration Number: ${udyamNum} registered to ${enterpriseName}`,
-        confidence: 0.99
+        excerpt: `[${mode === 'DEMO_SANDBOX' ? 'DEMO / SANDBOX VERIFICATION' : 'GOVT VERIFICATION'}] Udyam: ${udyamNum || 'N/A'}. Status: ${comparison.status}. ${comparison.statusMessage}`,
+        confidence: isVerified ? 0.99 : 0.95,
       },
-      checked_at: getCurrentTimestamp(),
-      confidence: 0.99,
-      manual_review_required: !isNameMatch,
-      findingMessage: isNameMatch
-        ? `Valid Udyam Registration (${udyamNum}) verified against enterprise credentials.`
-        : `Udyam enterprise name '${enterpriseName}' does not match bidder entity '${req.companyName}'.`
+      checked_at: comparison.verifiedAt,
+      confidence: isVerified ? 0.99 : 0.95,
+      manual_review_required: !isVerified,
+      findingMessage: comparison.statusMessage,
+      governmentVerification: comparison,
     };
   }
 }
