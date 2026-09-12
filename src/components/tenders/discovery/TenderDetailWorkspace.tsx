@@ -8,6 +8,7 @@
  */
 
 import { useState } from 'react';
+import Link from 'next/link';
 import {
   Building2,
   Clock,
@@ -98,12 +99,23 @@ export function TenderDetailWorkspace({
             </div>
           </div>
 
-          {/* Primary Action Button */}
-          <div className="shrink-0 w-full sm:w-auto">
+          {/* Primary Action Buttons */}
+          <div className="shrink-0 w-full sm:w-auto flex flex-col sm:flex-row items-center gap-2.5">
+            <Link href={`/bidder/tenders/${tender.id}/eligibility`} className="w-full sm:w-auto">
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto h-11 px-5 border-[#111111] bg-white hover:bg-[#F7F7F7] text-[#111111] font-medium text-xs sm:text-sm tracking-wide gap-2 rounded-md cursor-pointer"
+              >
+                <CheckCircle2 className="h-4 w-4 text-[#111111]" />
+                <span>Check My Eligibility</span>
+              </Button>
+            </Link>
             <Button
               onClick={onStartVerification}
               size="lg"
-              className="w-full sm:w-auto h-11 px-7 bg-[#111111] hover:bg-[#222222] text-white font-medium text-xs sm:text-sm tracking-wide gap-2.5 rounded-md shadow-xs cursor-pointer transition-colors"
+              className="w-full sm:w-auto h-11 px-6 bg-[#111111] hover:bg-[#222222] text-white font-medium text-xs sm:text-sm tracking-wide gap-2 rounded-md shadow-xs cursor-pointer transition-colors"
             >
               <ShieldCheck className="h-4 w-4" />
               <span>Start Bid Verification</span>

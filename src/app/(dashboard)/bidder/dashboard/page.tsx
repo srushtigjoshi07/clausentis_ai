@@ -68,8 +68,14 @@ export default async function BidderDashboardPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            <Link href="/bidder/government-verification">
+              <Button className="h-9 px-4 bg-[#111111] hover:bg-[#222222] text-white font-medium text-xs tracking-wide gap-2 cursor-pointer shadow-xs">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                Verify Government Records
+              </Button>
+            </Link>
             <Link href="/bidder/tenders">
-              <Button className="h-9 px-4 bg-[#111111] hover:bg-[#222222] text-white font-medium text-xs tracking-wide gap-2 cursor-pointer">
+              <Button variant="outline" className="h-9 px-3.5 border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] text-[#111111] font-medium text-xs tracking-wide gap-2 cursor-pointer">
                 <Search className="h-3.5 w-3.5 stroke-[1.5]" />
                 Find Tenders
               </Button>
@@ -82,6 +88,33 @@ export default async function BidderDashboardPage() {
             </Link>
           </div>
         </div>
+      </div>
+
+      {/* GOVERNMENT RECORD VERIFICATION GATEWAY BANNER */}
+      <div className="rounded-xl border border-[#E5E5E5] bg-[#FAFAFA] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-lg bg-white border border-[#E5E5E5] flex items-center justify-center shrink-0 shadow-2xs">
+            <ShieldCheck className="w-5 h-5 text-[#111111]" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm font-semibold text-[#111111]">
+                Statutory Government Verification Gateway
+              </h3>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A] font-semibold">
+                DEMO / SANDBOX
+              </span>
+            </div>
+            <p className="text-xs text-[#555555] mt-0.5">
+              Cross-verify enterprise identity against Udyam (MSME), GSTN, and MCA21 corporate registries with deterministic field comparison.
+            </p>
+          </div>
+        </div>
+        <Link href="/bidder/government-verification">
+          <Button variant="outline" className="h-9 px-4 border-[#E5E5E5] bg-white hover:bg-[#F0F0F0] text-[#111111] font-medium text-xs tracking-wide gap-2 shrink-0 cursor-pointer">
+            Run Gateway Check &rarr;
+          </Button>
+        </Link>
       </div>
 
       {/* 2. KPI STATUS TILES */}

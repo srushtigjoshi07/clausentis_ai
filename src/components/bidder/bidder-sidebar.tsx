@@ -15,7 +15,9 @@ import {
   LogOut,
   X,
   Briefcase,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Landmark,
+  CheckSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logout, switchRole } from '@/app/auth/actions';
@@ -24,9 +26,11 @@ import { Button } from '@/components/ui/button';
 const routes = [
   { name: 'Dashboard', path: '/bidder/dashboard', icon: LayoutDashboard },
   { name: 'Find Tenders', path: '/bidder/tenders', icon: Search },
+  { name: 'Check Eligibility', path: '/bidder/eligibility', icon: CheckSquare },
   { name: 'My Bids', path: '/bidder/bids', icon: FileCheck2 },
   { name: 'Documents', path: '/bidder/documents', icon: Files },
   { name: 'Compliance', path: '/bidder/compliance', icon: ShieldCheck },
+  { name: 'Govt Verification', path: '/bidder/government-verification', icon: Landmark },
   { name: 'Reports', path: '/bidder/reports', icon: BarChart3 },
   { name: 'AI Assistant', path: '/bidder/assistant', icon: Bot },
   { name: 'Settings', path: '/bidder/settings', icon: Settings },

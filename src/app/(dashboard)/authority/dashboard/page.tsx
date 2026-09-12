@@ -3,16 +3,13 @@ import Link from 'next/link';
 import { 
   Building2, 
   PlusCircle, 
-  FileText, 
   Inbox, 
-  Clock, 
-  AlertTriangle, 
-  ShieldAlert, 
   ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getTenderSource } from '@/lib/tender-discovery/tender-source';
 import { getAllBidderDossiers } from '@/lib/compliance/repository';
+import { ExecutiveDashboardCommandCenter } from '@/components/dashboard/ExecutiveDashboardCommandCenter';
 
 export const metadata = {
   title: 'Authority Dashboard - Clausentis',
@@ -25,14 +22,6 @@ export default async function AuthorityDashboardPage() {
   const activeTenders = searchRes.tenders;
 
   const dossiers = getAllBidderDossiers();
-
-  const metrics = {
-    activeTenders: activeTenders.length,
-    bidsReceived: dossiers.length,
-    pendingVerification: dossiers.filter(d => !d.officerDecision).length,
-    highRiskBids: dossiers.filter(d => d.riskLevel === 'HIGH' || d.riskLevel === 'CRITICAL').length,
-    manualReview: dossiers.filter(d => d.aiRecommendation.recommendation === 'REQUIRES MANUAL REVIEW').length,
-  };
 
   return (
     <div className="flex flex-col gap-8 max-w-7xl mx-auto pb-12 font-sans">
@@ -75,73 +64,9 @@ export default async function AuthorityDashboardPage() {
         </div>
       </div>
 
-      {/* 2. KPI METRIC TILES - REAL DERIVED FIGURES */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-        {/* Active Tenders */}
-        <div className="p-5 rounded-xl border border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase font-mono tracking-wider text-[#777777]">Active Tenders</span>
-            <Building2 className="w-4 h-4 text-[#555555]" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-1.5">
-            <span className="text-3xl font-bold text-[#111111] font-mono">{metrics.activeTenders}</span>
-            <span className="text-[11px] text-[#555555] font-medium">Published</span>
-          </div>
-          <p className="text-[11px] text-[#777777] mt-1">Live in CPPP portal</p>
-        </div>
+      {/* 2. EXECUTIVE DASHBOARD COMMAND CENTER (KPIs, Charts, Pipeline, Compliance Matrix) */}
+      <ExecutiveDashboardCommandCenter />
 
-        {/* Bids Received */}
-        <div className="p-5 rounded-xl border border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase font-mono tracking-wider text-[#777777]">Bids Received</span>
-            <Inbox className="w-4 h-4 text-[#555555]" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-1.5">
-            <span className="text-3xl font-bold text-[#111111] font-mono">{metrics.bidsReceived}</span>
-            <span className="text-[11px] text-[#555555] font-medium">Proposals</span>
-          </div>
-          <p className="text-[11px] text-[#777777] mt-1">Total incoming bids</p>
-        </div>
-
-        {/* Pending Verification */}
-        <div className="p-5 rounded-xl border border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase font-mono tracking-wider text-[#777777]">Pending Verification</span>
-            <FileText className="w-4 h-4 text-[#555555]" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-1.5">
-            <span className="text-3xl font-bold text-[#111111] font-mono">{metrics.pendingVerification}</span>
-            <span className="text-[11px] text-[#777777]">Awaiting Verdict</span>
-          </div>
-          <p className="text-[11px] text-[#777777] mt-1">Under officer review</p>
-        </div>
-
-        {/* High Risk Bids */}
-        <div className="p-5 rounded-xl border border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase font-mono tracking-wider text-[#777777]">High Risk Bids</span>
-            <ShieldAlert className="w-4 h-4 text-[#555555]" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-1.5">
-            <span className="text-3xl font-bold text-[#111111] font-mono">{metrics.highRiskBids}</span>
-            <span className="text-[11px] text-[#555555] font-medium">Critical</span>
-          </div>
-          <p className="text-[11px] text-[#777777] mt-1">Turnover / Debarment flag</p>
-        </div>
-
-        {/* Manual Review */}
-        <div className="p-5 rounded-xl border border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] transition-colors col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase font-mono tracking-wider text-[#777777]">Manual Review</span>
-            <AlertTriangle className="w-4 h-4 text-[#555555]" />
-          </div>
-          <div className="mt-3 flex items-baseline gap-1.5">
-            <span className="text-3xl font-bold text-[#111111] font-mono">{metrics.manualReview}</span>
-            <span className="text-[11px] text-[#555555] font-medium">Bids</span>
-          </div>
-          <p className="text-[11px] text-[#777777] mt-1">Missing affidavits / expiries</p>
-        </div>
-      </div>
 
       {/* 3. RECENT TENDERS TABLE */}
       <div className="rounded-xl border border-[#E5E5E5] bg-white overflow-hidden">

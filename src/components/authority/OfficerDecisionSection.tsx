@@ -519,6 +519,17 @@ export function OfficerDecisionSection({
               </div>
             )}
 
+            {/* STATUTORY SOVEREIGN DECISION DISCLAIMER BANNER */}
+            <div className="p-4 rounded-lg border border-[#FDE68A] bg-[#FFFBEB] text-[#92400E] space-y-1.5 shadow-2xs">
+              <div className="flex items-center gap-2 font-mono text-[11px] uppercase font-bold tracking-wider text-[#78350F]">
+                <ShieldCheck className="w-4 h-4 text-[#78350F]" />
+                Statutory Procurement Governance Disclaimer
+              </div>
+              <p className="text-xs text-[#78350F] leading-relaxed font-sans">
+                Artificial Intelligence recommendations and automated scorecards are strictly evidentiary and advisory inputs. Under <strong>General Financial Rules (GFR 2017 Rule 173)</strong> and <strong>Central Vigilance Commission (CVC)</strong> procurement guidelines, the authority to Qualify, Disqualify, or Request Clarification from any bidder resides exclusively and sovereignly with the designated <strong>Procurement Officer</strong>. AI will never execute an automated adjudication.
+              </p>
+            </div>
+
             {/* DECISION RADIO SELECTION */}
             <div className="space-y-2">
               <label className="text-xs font-semibold text-[#111111] uppercase font-mono block">

@@ -18,6 +18,7 @@ import { getBidderDocuments } from '@/lib/actions/documents';
 import { CorrigendumManager } from '@/components/tenders/CorrigendumManager';
 import { MatchedRequirementsPdfButton } from '@/components/reports/MatchedRequirementsPdfButton';
 import { ExportAuditPdfButton } from '@/components/audit/ExportAuditPdfButton';
+import { PreBidVsVerifiedComparison } from '@/components/compliance/PreBidVsVerifiedComparison';
 
 export const metadata = {
   title: 'Compliance Matrix - Clausentis Bidder Portal',
@@ -202,6 +203,15 @@ export default async function BidderCompliancePage() {
           })}
         </div>
       </div>
+
+      {/* Pre-Bid Declared Eligibility vs Post-Verification Reconciled Compliance */}
+      <PreBidVsVerifiedComparison 
+        bidderName="Apex Heavy Engineering Pvt Ltd"
+        preBidScore={95}
+        preBidVerdict="LIKELY ELIGIBLE"
+        verifiedScore={readinessPercentage}
+        verifiedVerdict={readinessPercentage >= 80 ? 'HIGH READINESS' : 'REQUIRES REMEDIATION'}
+      />
 
       {/* Tender Corrigendum & Re-Verification Alerts */}
       <CorrigendumManager role="BIDDER" />

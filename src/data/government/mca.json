@@ -1,0 +1,58 @@
+{
+  "_meta": {
+    "label": "DEMO GOVERNMENT DATA — NOT LIVE",
+    "description": "Synthetic MCA21 company records for SIH demonstration purposes only. These are NOT real Ministry of Corporate Affairs records.",
+    "source": "Ministry of Corporate Affairs — MCA21 V3 (Simulated Sandbox)",
+    "lastUpdated": "2026-09-12"
+  },
+  "records": [
+    {
+      "cin": "U72900KA2022PTC000001",
+      "companyName": "ABC Robotics Private Limited",
+      "status": "ACTIVE",
+      "companyClass": "Private",
+      "companyCategory": "Company limited by Shares",
+      "incorporationDate": "2022-01-15",
+      "registeredState": "Karnataka",
+      "rocCode": "RoC-Bengaluru",
+      "authorizedCapital": 10000000,
+      "paidUpCapital": 5000000,
+      "pan": "ABCDE1234F",
+      "registeredAddress": "Bengaluru, Karnataka",
+      "lastAgmDate": "2025-09-30",
+      "lastBalanceSheetDate": "2025-03-31"
+    },
+    {
+      "cin": "U28100TN2012PTC085123",
+      "companyName": "Apex Heavy Engineering Private Limited",
+      "status": "ACTIVE",
+      "companyClass": "Private",
+      "companyCategory": "Company limited by Shares",
+      "incorporationDate": "2012-03-15",
+      "registeredState": "Tamil Nadu",
+      "rocCode": "RoC-Chennai",
+      "authorizedCapital": 150000000,
+      "paidUpCapital": 124000000,
+      "pan": "AABCA1234F",
+      "registeredAddress": "Plot 41-A, Manali Industrial Estate, Chennai, Tamil Nadu",
+      "lastAgmDate": "2025-09-30",
+      "lastBalanceSheetDate": "2025-03-31"
+    },
+    {
+      "cin": "U36900TS2024PTC000003",
+      "companyName": "Future Robotics India Private Limited",
+      "status": "ACTIVE",
+      "companyClass": "Private",
+      "companyCategory": "Company limited by Shares",
+      "incorporationDate": "2024-03-01",
+      "registeredState": "Telangana",
+      "rocCode": "RoC-Hyderabad",
+      "authorizedCapital": 20000000,
+      "paidUpCapital": 10000000,
+      "pan": "ABCDE9012F",
+      "registeredAddress": "Hyderabad, Telangana",
+      "lastAgmDate": "2025-09-30",
+      "lastBalanceSheetDate": "2025-03-31"
+    }
+  ]
+}

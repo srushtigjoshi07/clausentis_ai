@@ -16,7 +16,8 @@ import {
   ArrowRightLeft,
   Files,
   BarChart3,
-  Bot
+  Bot,
+  Landmark
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logout, switchRole } from '@/app/auth/actions';
@@ -27,6 +28,7 @@ const routes = [
   { name: 'Tenders', path: '/authority/tenders', icon: FileText },
   { name: 'Submitted Bids', path: '/authority/bids', icon: FileCheck2 },
   { name: 'Compliance', path: '/authority/compliance', icon: ShieldCheck },
+  { name: 'Govt Verification', path: '/authority/government-verification', icon: Landmark },
   { name: 'Documents', path: '/authority/documents', icon: Files },
   { name: 'Reports', path: '/authority/reports', icon: BarChart3 },
   { name: 'Audit Trail', path: '/authority/audit', icon: History },

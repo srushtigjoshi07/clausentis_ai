@@ -28,3 +28,18 @@ export type {
   CrossDocumentSummary,
   CrossDocumentFindingRow,
 } from './cross-document';
+export type {
+  GovVerificationStatus,
+  GovVerificationSource,
+  GovVerificationEnvironment,
+  GovConnectorId,
+  GovFieldComparison,
+  GovVerificationEvidence,
+  GovVerificationResult,
+  BidderExtractedIdentity,
+  GovernmentVerificationReport,
+  EntityResolutionResult,
+  GovernmentVerificationScore,
+  IGovVerificationConnector,
+} from '@/lib/verification/types';
+

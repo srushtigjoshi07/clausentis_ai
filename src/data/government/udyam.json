@@ -1,0 +1,70 @@
+{
+  "_meta": {
+    "label": "DEMO GOVERNMENT DATA — NOT LIVE",
+    "description": "Synthetic Udyam registration records for SIH demonstration purposes only. These are NOT real Government of India records.",
+    "source": "Ministry of MSME — Udyam Registration Portal (Simulated Sandbox)",
+    "lastUpdated": "2026-09-12"
+  },
+  "records": [
+    {
+      "udyamNumber": "UDYAM-DEMO-0001",
+      "enterpriseName": "ABC Robotics Private Limited",
+      "organisationType": "Private Limited",
+      "status": "ACTIVE",
+      "enterpriseType": "Small",
+      "majorActivity": "Manufacturing - Robotics & Automation Systems",
+      "registrationDate": "2023-05-10",
+      "address": "Bengaluru, Karnataka",
+      "district": "Bengaluru Urban",
+      "state": "Karnataka",
+      "pan": "ABCDE1234F",
+      "dateOfCommencement": "2022-01-15",
+      "nicCode": "28140"
+    },
+    {
+      "udyamNumber": "UDYAM-DEMO-0002",
+      "enterpriseName": "TechNova Automation",
+      "organisationType": "Proprietorship",
+      "status": "CANCELLED",
+      "enterpriseType": "Micro",
+      "majorActivity": "Manufacturing - Control Systems",
+      "registrationDate": "2022-04-15",
+      "address": "Pune, Maharashtra",
+      "district": "Pune",
+      "state": "Maharashtra",
+      "pan": "ABCDE5678F",
+      "dateOfCommencement": "2021-08-01",
+      "nicCode": "26510"
+    },
+    {
+      "udyamNumber": "UDYAM-DEMO-0003",
+      "enterpriseName": "Future Robotics India",
+      "organisationType": "Private Limited",
+      "status": "ACTIVE",
+      "enterpriseType": "Medium",
+      "majorActivity": "Manufacturing - Industrial Robots",
+      "registrationDate": "2025-08-21",
+      "address": "Hyderabad, Telangana",
+      "district": "Hyderabad",
+      "state": "Telangana",
+      "pan": "ABCDE9012F",
+      "dateOfCommencement": "2024-03-01",
+      "nicCode": "28220"
+    },
+    {
+      "udyamNumber": "UDYAM-TN-02-0049182",
+      "enterpriseName": "Apex Heavy Engineering Pvt Ltd",
+      "organisationType": "Private Limited Company",
+      "status": "ACTIVE",
+      "enterpriseType": "Medium",
+      "majorActivity": "Industrial Machinery & High-Pressure Compressor Manufacturing",
+      "registrationDate": "2020-08-12",
+      "address": "Thiruvallur, Tamil Nadu",
+      "district": "Thiruvallur",
+      "state": "Tamil Nadu",
+      "pan": "AABCA1234F",
+      "dateOfCommencement": "2012-03-15",
+      "nicCode": "28132"
+    }
+  ]
+}

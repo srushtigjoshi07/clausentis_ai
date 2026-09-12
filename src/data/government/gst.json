@@ -1,0 +1,66 @@
+{
+  "_meta": {
+    "label": "DEMO GOVERNMENT DATA — NOT LIVE",
+    "description": "Synthetic GST registration records for SIH demonstration purposes only. These are NOT real GSTN records.",
+    "source": "Goods & Services Tax Network (Simulated Sandbox)",
+    "lastUpdated": "2026-09-12"
+  },
+  "records": [
+    {
+      "gstin": "29ABCDE1234F1Z5",
+      "legalName": "ABC Robotics Private Limited",
+      "tradeName": "ABC Robotics",
+      "status": "ACTIVE",
+      "registrationDate": "2022-07-01",
+      "taxpayerType": "Regular",
+      "constitutionOfBusiness": "Private Limited Company",
+      "state": "Karnataka",
+      "stateCode": "29",
+      "pan": "ABCDE1234F",
+      "lastReturnFiled": "August 2026",
+      "principalPlaceOfBusiness": "Bengaluru, Karnataka"
+    },
+    {
+      "gstin": "27ABCDE5678F1Z3",
+      "legalName": "TechNova Automation",
+      "tradeName": "TechNova",
+      "status": "CANCELLED",
+      "registrationDate": "2021-09-15",
+      "taxpayerType": "Regular",
+      "constitutionOfBusiness": "Proprietorship",
+      "state": "Maharashtra",
+      "stateCode": "27",
+      "pan": "ABCDE5678F",
+      "lastReturnFiled": "March 2025",
+      "principalPlaceOfBusiness": "Pune, Maharashtra"
+    },
+    {
+      "gstin": "36ABCDE9012F1Z1",
+      "legalName": "Future Robotics India Private Limited",
+      "tradeName": "Future Robotics",
+      "status": "ACTIVE",
+      "registrationDate": "2025-09-01",
+      "taxpayerType": "Regular",
+      "constitutionOfBusiness": "Private Limited Company",
+      "state": "Telangana",
+      "stateCode": "36",
+      "pan": "ABCDE9012F",
+      "lastReturnFiled": "August 2026",
+      "principalPlaceOfBusiness": "Hyderabad, Telangana"
+    },
+    {
+      "gstin": "33AABCA1234F1Z8",
+      "legalName": "Apex Heavy Engineering Private Limited",
+      "tradeName": "Apex Heavy Engineering",
+      "status": "ACTIVE",
+      "registrationDate": "2017-07-01",
+      "taxpayerType": "Regular",
+      "constitutionOfBusiness": "Private Limited Company",
+      "state": "Tamil Nadu",
+      "stateCode": "33",
+      "pan": "AABCA1234F",
+      "lastReturnFiled": "August 2026",
+      "principalPlaceOfBusiness": "Manali Industrial Area, Chennai, Tamil Nadu"
+    }
+  ]
+}

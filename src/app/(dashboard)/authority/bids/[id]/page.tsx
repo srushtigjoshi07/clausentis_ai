@@ -32,6 +32,7 @@ import { getBidderDossier, recordOfficerVerdict } from '@/lib/compliance/reposit
 import { CrossDocumentFinding, RequirementComplianceResult } from '@/lib/compliance/types';
 import { runAllStatutoryEvaluations } from '@/lib/providers/providers';
 import { GovernmentVerificationCard } from '@/components/compliance/GovernmentVerificationCard';
+import { PreBidVsVerifiedComparison } from '@/components/compliance/PreBidVsVerifiedComparison';
 import type { ProcurementDecisionRecord } from '@/types/procurement-decision';
 
 interface PrioritizedFinding {
@@ -492,6 +493,17 @@ export default function AuthorityBidDetailPage() {
             <GovernmentVerificationCard verification={udyamGovtVerification} />
           </div>
         )}
+
+        {/* Pre-Bid Self-Declared vs Final Post-Verification Comparison */}
+        <div className="mt-6 pt-4 border-t border-[#E5E5E5]">
+          <PreBidVsVerifiedComparison 
+            bidderName={dossier.bidderName}
+            preBidScore={95}
+            preBidVerdict="LIKELY ELIGIBLE"
+            verifiedScore={dossier.complianceScore}
+            verifiedVerdict={dossier.complianceScore >= 80 ? 'COMPLIANT & QUALIFIED' : 'REQUIRES REVIEW'}
+          />
+        </div>
       </div>
 
       {/* 2. REQUIREMENT-BY-REQUIREMENT ANALYSIS TABLE */}
