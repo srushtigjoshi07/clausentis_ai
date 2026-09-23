@@ -8,9 +8,11 @@
  * preserves source page citations, and constructs verifiable evidence.
  */
 
+import crypto from 'crypto';
 import { parsePdfDocument } from '@/lib/document/pdf-parser';
 import { extractBidderFactsWithHeuristics } from '@/lib/ai/cross-document-extractor';
 import { UdyamProvider } from '@/lib/providers/providers';
+import { analyzeDocumentForensics } from '@/lib/forensics';
 import type { BidUploadedDocument } from '@/types/tender-discovery';
 
 export interface ProcessedDocumentResult {
@@ -116,14 +118,39 @@ export async function processBidderDocumentAction(
       return { success: false, error: 'No file was provided.' };
     }
 
+    // 1. File Size Validation (Max 25MB)
+    const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+    if (file.size > MAX_FILE_SIZE) {
+      return {
+        success: false,
+        error: `File security validation failed: File exceeds maximum allowed size of 25MB (${(file.size / (1024 * 1024)).toFixed(1)}MB).`,
+      };
+    }
+
     const requestedTag = formData.get('userTag') as BidUploadedDocument['documentType'] | null;
     const arrayBuffer = await file.arrayBuffer();
+
+    // 2. Cryptographic SHA-256 Hashing for Immutability & Traceability
+    const sha256Hash = crypto.createHash('sha256').update(Buffer.from(arrayBuffer)).digest('hex');
+
+    // 3. File Security & Magic Byte Validation
+    const isPdf = file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
+    if (isPdf) {
+      const headerBytes = new Uint8Array(arrayBuffer, 0, Math.min(arrayBuffer.byteLength, 10));
+      const headerAscii = String.fromCharCode(...headerBytes);
+      if (!headerAscii.startsWith('%PDF-')) {
+        return {
+          success: false,
+          error: 'File Security Rejection: File extension or MIME claims PDF format, but binary header lacks standard %PDF- magic bytes.',
+        };
+      }
+    }
 
     let fullText = '';
     let pages: Array<{ pageNumber: number; cleanedText: string }> = [];
 
     // Parse PDF if PDF, or handle text
-    if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+    if (isPdf) {
       try {
         const parsed = await parsePdfDocument(arrayBuffer);
         fullText = parsed.fullText;
@@ -278,15 +305,31 @@ export async function processBidderDocumentAction(
       }
     }
 
+    // 4. Run Modular Document Forensics Engine
+    const forensicReport = isPdf
+      ? analyzeDocumentForensics(arrayBuffer, file.name, sha256Hash, docType)
+      : undefined;
+
+    const versionNum = parseInt((formData.get('version') as string) || '1', 10) || 1;
+    const versionLabel = `DOC-V${versionNum}`;
+
     const resultDoc: BidUploadedDocument = {
       id: `doc-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       fileName: file.name,
       documentType: docType,
       displayName,
       fileSizeBytes: file.size,
+      mimeType: file.type || (isPdf ? 'application/pdf' : 'text/plain'),
+      sha256Hash,
+      version: versionNum,
+      versionLabel,
+      lifecycleStatus: 'EVIDENCE_READY',
       status: 'processed',
       uploadedAt: new Date().toISOString(),
+      processedAt: new Date().toISOString(),
+      verifiedAt: new Date().toISOString(),
       extractedFacts,
+      forensicReport,
     };
 
     return {

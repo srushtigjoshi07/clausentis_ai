@@ -772,6 +772,35 @@ export function runBidComplianceEvaluation(
     overallScore = Math.max(overallScore - 15, 35);
   }
 
+  // Check 5C: Document Forensics & Integrity Check (Deterministic structural artifacts)
+  let forensicSuspicionCount = 0;
+  for (const doc of documents) {
+    if (doc.forensicReport) {
+      if (doc.forensicReport.overallStatus === 'SUSPICIOUS' || doc.forensicReport.overallStatus === 'FAILED') {
+        forensicSuspicionCount++;
+        const highSevFindings = doc.forensicReport.findings.filter(
+          (f) => f.severity === 'HIGH' || f.severity === 'CRITICAL'
+        );
+        for (const finding of highSevFindings) {
+          criticalFindings.push({
+            id: `crit-forensic-${doc.id}-${finding.id}`,
+            title: `Forensic Integrity Alert: ${finding.checkLabel}`,
+            required: 'Original, unaltered PDF artifact matching official issuance criteria',
+            evidence: `${doc.fileName}: ${finding.explanation} (Producer: ${doc.forensicReport.producerTool || 'Unknown'})`,
+            source: doc.fileName,
+            page: finding.page || 1,
+            status: 'HIGH_RISK',
+            remediation: 'Procurement Officer must request original cryptographically signed PDF or verify directly with issuing authority.',
+          });
+        }
+      }
+    }
+  }
+
+  if (forensicSuspicionCount > 0) {
+    overallScore = Math.max(overallScore - (forensicSuspicionCount * 10), 25);
+  }
+
   let status: BidComplianceReport['status'] = 'READY_FOR_SUBMISSION';
   if (mandatoryFailed > 0 || crossDocumentMismatches.some((m) => m.severity === 'HIGH')) {
     status = 'BLOCKED_CRITICAL_FAILURES';

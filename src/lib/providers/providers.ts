@@ -115,6 +115,8 @@ export class UdyamProvider implements IStatutoryProvider {
     const verificationStatus: VerificationSourceStatus =
       comparison.status === 'MATCH'
         ? (mode === 'LIVE_AUTHORIZED' ? 'LIVE_VERIFIED' : 'PROTOTYPE_VERIFIED')
+        : comparison.status === 'UNABLE_TO_VERIFY'
+        ? 'UNABLE_TO_VERIFY'
         : comparison.status === 'MISMATCH'
         ? 'MANUAL_REVIEW'
         : comparison.status === 'NOT_FOUND'

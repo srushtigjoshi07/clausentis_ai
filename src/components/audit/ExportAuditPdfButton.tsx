@@ -16,6 +16,7 @@ interface ExportAuditPdfButtonProps {
   size?: 'sm' | 'default';
   className?: string;
   label?: string;
+  documentType?: string;
 }
 
 export function ExportAuditPdfButton({
@@ -28,6 +29,7 @@ export function ExportAuditPdfButton({
   size = 'sm',
   className,
   label = 'Export Audit PDF',
+  documentType,
 }: ExportAuditPdfButtonProps) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -64,6 +66,7 @@ export function ExportAuditPdfButton({
         identifier: bidId || payload.identifier || tenderRef || 'audit',
         records: payload.records || [],
         dossier: payload.dossier,
+        documentType: documentType || 'audit',
       };
 
       // 3. Generate and trigger download

@@ -343,7 +343,7 @@ function DiscoverContent() {
               onDocumentsChange={(docs: BidUploadedDocument[]) => {
                 setUploadedDocuments(docs);
                 if (bidderProfile) {
-                  let updated = { ...bidderProfile };
+                  const updated = { ...bidderProfile };
                   let changed = false;
                   for (const d of docs) {
                     if (d.extractedFacts?.gstin && typeof d.extractedFacts.gstin === 'string' && (!updated.gstin || updated.gstin.startsWith('33AABCA0000'))) {

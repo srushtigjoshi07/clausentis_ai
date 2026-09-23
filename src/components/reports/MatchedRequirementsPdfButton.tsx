@@ -3,29 +3,48 @@
 import React, { useState } from 'react';
 import { Download, Bookmark, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getMatchedRequirementsPayload, saveMatchedRequirementsReport } from '@/lib/actions/matched-requirements';
+import { 
+  getMatchedRequirementsPayload, 
+  getMultiBidderComparisonPayload, 
+  saveMatchedRequirementsReport 
+} from '@/lib/actions/matched-requirements';
 import { downloadMatchedRequirementsPdf } from '@/lib/pdf/matched-requirements-pdf-generator';
+import { downloadMultiBidderMatchedRequirementsPdf } from '@/lib/pdf/multi-bidder-matched-requirements-pdf-generator';
+import { BidderEvaluationDossier } from '@/lib/compliance/types';
+import { generatePdfFilename, triggerServerPdfDownload } from '@/lib/pdf/pdf-download-helper';
 
 interface MatchedRequirementsPdfButtonProps {
   tenderId?: string;
+  tenderTitle?: string;
+  tenderRef?: string;
+  tenderAuthority?: string;
   bidId?: string;
   bidderCompanyName?: string;
+  isMultiBidder?: boolean;
+  dossiers?: BidderEvaluationDossier[];
   variant?: 'default' | 'outline' | 'secondary' | 'ghost';
   size?: 'sm' | 'default' | 'lg';
   className?: string;
   label?: string;
   showSaveButton?: boolean;
+  documentType?: 'matched-requirements' | 'compliance-report';
 }
 
 export function MatchedRequirementsPdfButton({
   tenderId,
+  tenderTitle,
+  tenderRef,
+  tenderAuthority,
   bidId,
   bidderCompanyName,
+  isMultiBidder = false,
+  dossiers,
   variant = 'outline',
   size = 'sm',
   className,
   label = 'Matched Requirements PDF',
   showSaveButton = false,
+  documentType = 'matched-requirements',
 }: MatchedRequirementsPdfButtonProps) {
   const [downloading, setDownloading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -36,39 +55,27 @@ export function MatchedRequirementsPdfButton({
     setMessage(null);
 
     try {
-      const payload = await getMatchedRequirementsPayload({
-        tenderId,
-        bidId,
-        bidderCompanyName,
-      });
-
-      if (!payload.success || !payload.dossier) {
+      // 1. MULTI-BIDDER PATH (Use robust server streaming route with Content-Disposition)
+      if (isMultiBidder) {
+        const effectiveTenderId = tenderId || 'tender-cpcl-2026-0412';
+        const expectedFilename = generatePdfFilename('matched-requirements', tenderRef || 'CPCL/ENG/2026/HPGC-0412');
+        triggerServerPdfDownload(`/api/pdf/download?type=matched-requirements&tenderId=${effectiveTenderId}`, expectedFilename);
         setMessage({
-          type: 'error',
-          text: payload.error || 'Failed to load evaluation dossier.',
+          type: 'success',
+          text: `Downloaded ${expectedFilename}.`,
         });
-        setDownloading(false);
         return;
       }
 
-      const result = await downloadMatchedRequirementsPdf({
-        dossier: payload.dossier,
-        role: payload.role || 'bidder',
-        userFullName: payload.userFullName,
-        userOrgName: payload.userOrgName,
+      // 2. SINGLE-BIDDER PATH
+      const docType = documentType === 'compliance-report' ? 'compliance-report' : 'single-matched-requirements';
+      const expectedFilename = generatePdfFilename(documentType || 'matched-requirements', bidderCompanyName || bidId || 'bidder');
+      triggerServerPdfDownload(`/api/pdf/download?type=${docType}&tenderId=${tenderId || ''}&bidId=${bidId || ''}`, expectedFilename);
+      setMessage({
+        type: 'success',
+        text: `Downloaded ${expectedFilename}.`,
       });
-
-      if (result.success) {
-        setMessage({
-          type: 'success',
-          text: 'Matched Requirements PDF downloaded.',
-        });
-      } else {
-        setMessage({
-          type: 'error',
-          text: result.error || 'Unable to generate PDF.',
-        });
-      }
+      return;
     } catch (err: unknown) {
       console.error('[MatchedReqButton] Export error:', err);
       setMessage({
@@ -77,7 +84,7 @@ export function MatchedRequirementsPdfButton({
       });
     } finally {
       setDownloading(false);
-      setTimeout(() => setMessage(null), 4000);
+      setTimeout(() => setMessage(null), 4500);
     }
   };
 

@@ -9,6 +9,8 @@
  * 5. Clausentis Prototype Bid Submission and immutable audit receipt
  */
 
+import type { DocumentForensicReport } from '@/lib/forensics/types';
+
 export type DiscoveredTenderCategory =
   | 'Goods'
   | 'Works'
@@ -99,6 +101,20 @@ export interface BidderProfile {
   relevantExperienceYears?: number;
 }
 
+export type DocumentProcessingLifecycle =
+  | 'UPLOADED'
+  | 'PROCESSING'
+  | 'EXTRACTING'
+  | 'FORENSIC_ANALYSIS'
+  | 'VERIFYING'
+  | 'EVIDENCE_READY'
+  | 'EVALUATED'
+  | 'COMPLETED'
+  | 'PROCESSING_FAILED'
+  | 'EXTRACTION_FAILED'
+  | 'VERIFICATION_FAILED'
+  | 'MANUAL_REVIEW_REQUIRED';
+
 export interface BidUploadedDocument {
   id: string;
   fileName: string;
@@ -115,9 +131,17 @@ export interface BidUploadedDocument {
     | 'other';
   displayName: string;
   fileSizeBytes: number;
-  status: 'uploaded' | 'processing' | 'processed' | 'failed';
+  mimeType?: string;
+  sha256Hash?: string;
+  version?: number;
+  versionLabel?: string; // e.g. "DOC-V1"
+  lifecycleStatus?: DocumentProcessingLifecycle;
+  status: 'uploaded' | 'processing' | 'processed' | 'failed' | DocumentProcessingLifecycle;
   uploadedAt: string;
+  processedAt?: string;
+  verifiedAt?: string;
   extractedFacts?: Record<string, unknown>;
+  forensicReport?: DocumentForensicReport;
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -12,6 +12,7 @@ import {
   drawCryptographicSealBox,
   drawRunningFooter
 } from '@/lib/pdf/pdf-theme';
+import { downloadPdfFromBytes, generatePdfFilename } from '@/lib/pdf/pdf-download-helper';
 
 export interface SignedDecisionPdfOptions {
   decision: ProcurementDecisionRecord;
@@ -305,8 +306,50 @@ export function generateSignedDecisionPdfBuffer(options: SignedDecisionPdfOption
   return new Uint8Array(arrayBuffer);
 }
 
-export function generateSignedDecisionPdfBlobUrl(options: SignedDecisionPdfOptions): string {
+/**
+ * Generates a Blob of the Signed Decision PDF with explicit application/pdf MIME type
+ */
+export function generateSignedDecisionPdfBlob(options: SignedDecisionPdfOptions): Blob {
   const doc = createSignedDecisionPdfDocument(options);
-  const blob = doc.output('blob');
+  const arrayBuffer = doc.output('arraybuffer');
+  return new Blob([arrayBuffer], { type: 'application/pdf' });
+}
+
+/**
+ * Generates a client-side Blob URL for instant browser preview or download
+ */
+export function generateSignedDecisionPdfBlobUrl(options: SignedDecisionPdfOptions): string {
+  const blob = generateSignedDecisionPdfBlob(options);
   return URL.createObjectURL(blob);
+}
+
+/**
+ * Triggers browser download of the Signed Decision PDF with standardized naming:
+ * clausentis-signed-decision-{bidder-name}-{YYYY-MM-DD}.pdf
+ */
+export async function downloadSignedDecisionPdf(
+  options: SignedDecisionPdfOptions
+): Promise<{ success: boolean; filename?: string; error?: string }> {
+  try {
+    const doc = createSignedDecisionPdfDocument(options);
+    const arrayBuffer = doc.output('arraybuffer');
+
+    const entityName =
+      options.decision.bidder_name ||
+      options.dossier?.shortName ||
+      options.dossier?.bidderName ||
+      options.decision.bid_id ||
+      'bidder';
+    const filename = generatePdfFilename('signed-decision', entityName);
+
+    const result = await downloadPdfFromBytes(arrayBuffer, filename);
+    if (!result.success) {
+      throw new Error(result.error || 'Download failed');
+    }
+
+    return { success: true, filename: result.filename };
+  } catch (err: unknown) {
+    console.error('[SignedDecisionPDF] Download failed:', err);
+    return { success: false, error: (err as Error)?.message || 'Failed to download PDF' };
+  }
 }

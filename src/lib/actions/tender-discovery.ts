@@ -23,7 +23,13 @@ import {
 } from '@/lib/tender-discovery/submission-adapter';
 import { registerSubmittedBidDossier } from '@/lib/compliance/repository';
 import { UdyamProvider } from '@/lib/providers/providers';
-import type { BidderEvaluationDossier } from '@/lib/compliance/types';
+import type {
+  BidderEvaluationDossier,
+  ComplianceRuleType,
+  ComplianceStatus,
+  RiskLevel,
+  CrossDocumentFinding,
+} from '@/lib/compliance/types';
 import type {
   BidderProfile,
   BidComplianceReport,
@@ -248,19 +254,19 @@ export async function submitBidPackageAction(
           clauseCode: row.tenderClauseReference,
           title: row.requirementTitle,
           category: row.category,
-          ruleType: (row.category === 'Financial' ? 'MINIMUM_VALUE' : 'DOCUMENT_REQUIRED') as any,
+          ruleType: (row.category === 'Financial' ? 'MINIMUM_VALUE' : 'DOCUMENT_REQUIRED') as ComplianceRuleType,
           mandatory: row.isMandatory ?? true,
-          status: row.status as any,
+          status: row.status as ComplianceStatus,
           expectedValue: row.requiredCriteria,
           verifiedValue: row.bidderEvidence,
           reason: row.failureReason || 'Requirement verified against submitted evidence.',
-          riskFactor: (row.riskLevel || 'LOW') as any,
+          riskFactor: (row.riskLevel || 'LOW') as RiskLevel,
         })),
         crossDocumentFindings: report.crossDocumentMismatches.map((m, idx) => ({
           id: `mismatch-${idx + 1}`,
-          findingType: 'TURNOVER_MISMATCH' as any,
+          findingType: 'TURNOVER_MISMATCH' as CrossDocumentFinding['findingType'],
           title: `Cross-Document Discrepancy: ${m.field}`,
-          severity: (m.severity || 'HIGH') as any,
+          severity: (m.severity || 'HIGH') as RiskLevel,
           primaryDocument: {
             name: m.documentA,
             page: 1,

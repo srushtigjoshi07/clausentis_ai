@@ -13,6 +13,7 @@ import {
   drawCryptographicSealBox,
   drawRunningFooter
 } from './pdf-theme';
+import { downloadPdfFromBytes, generatePdfFilename } from '@/lib/pdf/pdf-download-helper';
 
 export interface MatchedRequirementsPdfOptions {
   dossier?: BidderEvaluationDossier;
@@ -22,6 +23,7 @@ export interface MatchedRequirementsPdfOptions {
   bidderCompanyName?: string;
   userFullName?: string;
   userOrgName?: string;
+  documentType?: 'matched-requirements' | 'compliance-report';
 }
 
 function getLastAutoTableY(doc: jsPDF): number {
@@ -426,9 +428,13 @@ export function createMatchedRequirementsPdfDocument(options: MatchedRequirement
   return doc;
 }
 
+/**
+ * Generates the PDF blob with explicit application/pdf MIME type
+ */
 export async function generateMatchedRequirementsPdfBlob(options: MatchedRequirementsPdfOptions): Promise<Blob> {
   const doc = createMatchedRequirementsPdfDocument(options);
-  return doc.output('blob');
+  const arrayBuffer = doc.output('arraybuffer');
+  return new Blob([arrayBuffer], { type: 'application/pdf' });
 }
 
 export async function generateMatchedRequirementsPdfBuffer(options: MatchedRequirementsPdfOptions): Promise<ArrayBuffer> {
@@ -436,25 +442,25 @@ export async function generateMatchedRequirementsPdfBuffer(options: MatchedRequi
   return doc.output('arraybuffer');
 }
 
-export async function downloadMatchedRequirementsPdf(options: MatchedRequirementsPdfOptions): Promise<{ success: boolean; error?: string }> {
+/**
+ * Triggers browser download of the matched requirements PDF with standardized naming:
+ * clausentis-matched-requirements-{bidder-name}-{YYYY-MM-DD}.pdf
+ */
+export async function downloadMatchedRequirementsPdf(options: MatchedRequirementsPdfOptions): Promise<{ success: boolean; filename?: string; error?: string }> {
   try {
-    const blob = await generateMatchedRequirementsPdfBlob(options);
-    const dateSlug = new Date().toISOString().split('T')[0];
-    const safeBidder = (options.dossier?.shortName || options.dossier?.bidderName || options.bidderCompanyName || 'bidder')
-      .toLowerCase()
-      .replace(/[^a-z0-9_-]/g, '-');
-    const filename = `clausentis-matched-requirements-${safeBidder}-${dateSlug}.pdf`;
+    const doc = createMatchedRequirementsPdfDocument(options);
+    const arrayBuffer = doc.output('arraybuffer');
 
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const docType = options.documentType || 'matched-requirements';
+    const entityName = options.dossier?.shortName || options.dossier?.bidderName || options.bidderCompanyName || 'bidder';
+    const filename = generatePdfFilename(docType, entityName);
 
-    return { success: true };
+    const result = await downloadPdfFromBytes(arrayBuffer, filename);
+    if (!result.success) {
+      throw new Error(result.error || 'Download failed');
+    }
+
+    return { success: true, filename: result.filename };
   } catch (err: unknown) {
     console.error('[MatchedRequirementsPDF] Generation failed:', err);
     return { success: false, error: (err as Error)?.message || 'Failed to generate PDF' };

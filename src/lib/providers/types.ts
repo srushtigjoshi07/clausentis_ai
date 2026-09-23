@@ -30,6 +30,7 @@ export type VerificationSourceStatus =
   | 'PROTOTYPE_VERIFIED'
   | 'INTEGRATION_READY'
   | 'SOURCE_UNAVAILABLE'
+  | 'UNABLE_TO_VERIFY'
   | 'MANUAL_REVIEW'
   | 'NOT_APPLICABLE';
 

@@ -105,6 +105,14 @@ export default async function AuthorityReportsPage() {
                   <MatchedRequirementsPdfButton
                     tenderId="tender-cpcl-2026-0412"
                     label="Download Matrix PDF"
+                    documentType="matched-requirements"
+                    showSaveButton={true}
+                  />
+                ) : report.type === 'TENDER_COMPLIANCE_SUMMARY' ? (
+                  <MatchedRequirementsPdfButton
+                    tenderId="tender-cpcl-2026-0412"
+                    label="Download Compliance Report PDF"
+                    documentType="compliance-report"
                     showSaveButton={true}
                   />
                 ) : (
@@ -112,7 +120,7 @@ export default async function AuthorityReportsPage() {
                     tenderTitle="Supply, Installation and Commissioning of High-Pressure Gas Compressor System"
                     tenderRef="CPCL/ENG/2026/HPGC-0412"
                     tenderId="tender-cpcl-2026-0412"
-                    label="Download PDF"
+                    label="Download Audit PDF"
                   />
                 )}
               </div>

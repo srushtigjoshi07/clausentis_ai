@@ -10,6 +10,7 @@ import {
   drawCryptographicSealBox,
   drawRunningFooter
 } from './pdf-theme';
+import { downloadPdfFromBytes, generatePdfFilename } from '@/lib/pdf/pdf-download-helper';
 
 export type { AuditPdfRecord };
 
@@ -21,6 +22,7 @@ export interface AuditPdfOptions {
   identifier?: string;
   records: AuditPdfRecord[];
   dossier?: BidderEvaluationDossier | null;
+  documentType?: string;
 }
 
 /**
@@ -383,9 +385,13 @@ export function createAuditPdfDocument(options: AuditPdfOptions): jsPDF {
   return doc;
 }
 
+/**
+ * Generates an audit trail PDF blob with explicit application/pdf MIME type
+ */
 export async function generateAuditPdfBlob(options: AuditPdfOptions): Promise<Blob> {
   const doc = createAuditPdfDocument(options);
-  return doc.output('blob');
+  const arrayBuffer = doc.output('arraybuffer');
+  return new Blob([arrayBuffer], { type: 'application/pdf' });
 }
 
 export async function generateAuditPdfBuffer(options: AuditPdfOptions): Promise<ArrayBuffer> {
@@ -393,25 +399,25 @@ export async function generateAuditPdfBuffer(options: AuditPdfOptions): Promise<
   return doc.output('arraybuffer');
 }
 
-export async function downloadAuditPdf(options: AuditPdfOptions): Promise<{ success: boolean; error?: string }> {
+/**
+ * Triggers browser download of the audit PDF with standardized naming:
+ * clausentis-audit-{identifier}-{YYYY-MM-DD}.pdf
+ */
+export async function downloadAuditPdf(options: AuditPdfOptions): Promise<{ success: boolean; filename?: string; error?: string }> {
   try {
-    const blob = await generateAuditPdfBlob(options);
-    const dateSlug = new Date().toISOString().split('T')[0];
-    const safeId = (options.identifier || options.tenderReference || 'audit')
-      .toLowerCase()
-      .replace(/[^a-z0-9_-]/g, '-');
-    const filename = `clausentis-audit-${safeId}-${dateSlug}.pdf`;
+    const doc = createAuditPdfDocument(options);
+    const arrayBuffer = doc.output('arraybuffer');
 
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const docType = options.documentType || 'audit';
+    const entityName = options.identifier || options.dossier?.bidId || options.bidderName || options.tenderReference || 'ledger';
+    const filename = generatePdfFilename(docType, entityName);
 
-    return { success: true };
+    const result = await downloadPdfFromBytes(arrayBuffer, filename);
+    if (!result.success) {
+      throw new Error(result.error || 'Download failed');
+    }
+
+    return { success: true, filename: result.filename };
   } catch (err: unknown) {
     console.error('[AuditPDF] Generation failed:', err);
     return { success: false, error: (err as Error)?.message || 'Failed to generate PDF' };

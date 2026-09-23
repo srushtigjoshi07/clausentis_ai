@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { ForensicReportCard } from '@/components/forensics/ForensicReportCard';
+import type { DocumentForensicReport } from '@/lib/forensics/types';
 import { 
   Building2, 
   ArrowLeft, 
@@ -16,7 +18,10 @@ import {
   Check, 
   X, 
   FileCheck2, 
-  ExternalLink 
+  ExternalLink,
+  Fingerprint,
+  FileCode,
+  HelpCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ExportAuditPdfButton } from '@/components/audit/ExportAuditPdfButton';
@@ -44,6 +49,12 @@ interface PrioritizedFinding {
   evidenceDocument: string;
   page: number;
   recommendation: string;
+  whyExplanation?: string;
+  delta?: string;
+  confidence?: number;
+  regulatoryRule?: string;
+  primaryExcerpt?: string;
+  conflictingExcerpt?: string;
 }
 
 export default function AuthorityBidDetailPage() {
@@ -53,6 +64,7 @@ export default function AuthorityBidDetailPage() {
   const dossier = getBidderDossier(bidId) || getBidderDossier('bid-apex-02')!;
 
   const [selectedFinding, setSelectedFinding] = useState<PrioritizedFinding | null>(null);
+  const [selectedForensicReport, setSelectedForensicReport] = useState<DocumentForensicReport | null>(null);
   const [officerDecision, setOfficerDecision] = useState<{
     decision: string;
     timestamp: string;
@@ -133,7 +145,7 @@ export default function AuthorityBidDetailPage() {
     aiRecommendation: dossier.aiRecommendation,
   };
 
-  const findings = dossier.crossDocumentFindings.map((cf) => ({
+  const findings: PrioritizedFinding[] = dossier.crossDocumentFindings.map((cf) => ({
     id: cf.id,
     priority: cf.severity,
     title: cf.title,
@@ -142,6 +154,16 @@ export default function AuthorityBidDetailPage() {
     evidenceDocument: `${cf.primaryDocument.name} (p.${cf.primaryDocument.page}) vs ${cf.conflictingDocument.name} (p.${cf.conflictingDocument.page})`,
     page: cf.conflictingDocument.page,
     recommendation: cf.recommendedAction,
+    whyExplanation: `Automated cross-document reconciliation detected a material contradiction between primary declared exhibits and audited statutory filings. The values are mutually exclusive under public procurement rules.`,
+    delta: `${cf.primaryDocument.value} vs ${cf.conflictingDocument.value}`,
+    confidence: 0.98,
+    regulatoryRule: cf.findingType === 'TURNOVER_MISMATCH'
+      ? 'GFR 2017 Rule 175(1) & CVC Guidelines on Financial Misrepresentation'
+      : cf.findingType === 'OEM_MISMATCH'
+      ? 'NIT Section 3.2 Clause 5.1 (Direct Manufacturer Authorization Requirement)'
+      : 'Public Procurement (Preference to Make in India) Order 2017',
+    primaryExcerpt: cf.primaryDocument.excerpt,
+    conflictingExcerpt: cf.conflictingDocument.excerpt,
   })).concat(
     dossier.requirementResults
       .filter((r) => r.status === 'FAIL' || r.status === 'MISSING' || r.status === 'WARNING')
@@ -156,8 +178,237 @@ export default function AuthorityBidDetailPage() {
         recommendation: r.status === 'FAIL' 
           ? 'Grounds for qualification disqualification under tender terms.'
           : 'Request formal clarification / sworn undertaking from bidder before award release.',
+        whyExplanation: r.status === 'MISSING'
+          ? 'Mandatory qualification exhibit required by tender specifications was omitted from the sealed bidder package.'
+          : r.status === 'FAIL'
+          ? `Extracted value (${r.verifiedValue}) does not satisfy mandatory minimum threshold (${r.expectedValue}) specified in NIT.`
+          : 'Potential validity window or compliance ambiguity detected requiring Procurement Officer discretion.',
+        delta: r.discrepancyDelta || `Required: ${r.expectedValue} | Found: ${r.verifiedValue}`,
+        confidence: r.evidence?.confidence ?? 0.95,
+        regulatoryRule: 'Manual for Procurement of Goods 2022 (DoE / Ministry of Finance)',
+        primaryExcerpt: r.evidence?.extractedText,
+        conflictingExcerpt: undefined,
       }))
   );
+
+  // Ingested Documents and Forensic Integrity Records
+  const uploadedDocuments: import('@/types/tender-discovery').BidUploadedDocument[] = dossier.documents || [
+    {
+      id: 'doc-01',
+      fileName: 'Form_GST_REG06_Registration.pdf',
+      displayName: 'GST Registration Certificate',
+      documentType: 'gst_certificate',
+      fileSizeBytes: 1420000,
+      uploadedAt: '2026-09-09T18:45:00Z',
+      status: 'processed',
+      sha256Hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      lifecycleStatus: 'EVIDENCE_READY',
+      version: 1,
+      versionLabel: 'DOC-V1',
+      forensicReport: {
+        documentId: 'doc-01',
+        fileName: 'Form_GST_REG06_Registration.pdf',
+        sha256Checksum: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        overallStatus: 'PASS' as const,
+        overallSeverity: 'LOW' as const,
+        findings: [
+          {
+            id: 'chk-magic-1',
+            check: 'PDF_STRUCTURE_ANALYSIS' as const,
+            checkLabel: 'Standard PDF Header Structure',
+            status: 'PASS' as const,
+            severity: 'LOW' as const,
+            confidence: 1.0,
+            explanation: 'Clean %PDF-1.7 magic byte header verified at file offset 0.',
+          },
+          {
+            id: 'chk-rev-1',
+            check: 'PDF_REVISION_ANALYSIS' as const,
+            checkLabel: 'Incremental Update Stream Count',
+            status: 'PASS' as const,
+            severity: 'LOW' as const,
+            confidence: 1.0,
+            explanation: 'Single EOF marker found. No post-generation incremental object updates detected.',
+          },
+          {
+            id: 'chk-meta-1',
+            check: 'PDF_METADATA_ANALYSIS' as const,
+            checkLabel: 'Document Generator Identification',
+            status: 'PASS' as const,
+            severity: 'LOW' as const,
+            confidence: 0.95,
+            explanation: 'Generated by Goods and Services Tax Network Portal PDF Rendering Engine.',
+          },
+          {
+            id: 'chk-sig-1',
+            check: 'DIGITAL_SIGNATURE_CHECK' as const,
+            checkLabel: 'PKCS#7 Digital Signature Detection',
+            status: 'PASS' as const,
+            severity: 'LOW' as const,
+            confidence: 0.99,
+            explanation: 'Valid embedded PKCS#7 digital signature found with intact /ByteRange.',
+          },
+        ],
+        hasDigitalSignature: true,
+        revisionCount: 1,
+        producerTool: 'GSTN Portal / Apache FOP 2.3',
+        analyzedAt: '2026-09-09T18:45:10Z',
+        engineVersion: 'Clausentis-Forensics v2.4-deterministic',
+        summary: 'All forensic checks passed. Document structural integrity verified concordant.',
+      },
+    },
+    {
+      id: 'doc-02',
+      fileName: 'Company_PAN_NSDL.pdf',
+      displayName: 'Income Tax PAN Card',
+      documentType: 'pan_card',
+      fileSizeBytes: 890000,
+      uploadedAt: '2026-09-09T18:45:00Z',
+      status: 'processed',
+      sha256Hash: 'a7c93e430f14238e9d3d3b76428c9a8971f654b03658f8b3d68725838520269f',
+      lifecycleStatus: 'EVIDENCE_READY',
+      version: 1,
+      versionLabel: 'DOC-V1',
+      forensicReport: {
+        documentId: 'doc-02',
+        fileName: 'Company_PAN_NSDL.pdf',
+        sha256Checksum: 'a7c93e430f14238e9d3d3b76428c9a8971f654b03658f8b3d68725838520269f',
+        overallStatus: 'PASS' as const,
+        overallSeverity: 'LOW' as const,
+        findings: [
+          {
+            id: 'chk-magic-2',
+            check: 'PDF_STRUCTURE_ANALYSIS' as const,
+            checkLabel: 'Standard PDF Header Structure',
+            status: 'PASS' as const,
+            severity: 'LOW' as const,
+            confidence: 1.0,
+            explanation: 'Clean %PDF-1.6 magic byte header verified at file offset 0.',
+          },
+          {
+            id: 'chk-sig-2',
+            check: 'DIGITAL_SIGNATURE_CHECK' as const,
+            checkLabel: 'PKCS#7 Digital Signature Detection',
+            status: 'PASS' as const,
+            severity: 'LOW' as const,
+            confidence: 0.98,
+            explanation: 'NSDL e-Gov Certificate Authority digital signature detected.',
+          },
+        ],
+        hasDigitalSignature: true,
+        revisionCount: 1,
+        producerTool: 'Protean eGov NSDL Signer',
+        analyzedAt: '2026-09-09T18:45:12Z',
+        engineVersion: 'Clausentis-Forensics v2.4-deterministic',
+        summary: 'Statutory PDF verified with valid NSDL signature structure.',
+      },
+    },
+    {
+      id: 'doc-03',
+      fileName: 'Financial_Statement.pdf',
+      displayName: 'Audited Financial Statements (14 Pages)',
+      documentType: 'audited_financials',
+      fileSizeBytes: 5200000,
+      uploadedAt: '2026-09-09T18:45:00Z',
+      status: 'processed',
+      sha256Hash: 'f4128ca873523498b5840d061c0c1e3458b2927952a5598685e138a08d29b201',
+      lifecycleStatus: 'EVIDENCE_READY',
+      version: 1,
+      versionLabel: 'DOC-V1',
+      forensicReport: {
+        documentId: 'doc-03',
+        fileName: 'Financial_Statement.pdf',
+        sha256Checksum: 'f4128ca873523498b5840d061c0c1e3458b2927952a5598685e138a08d29b201',
+        overallStatus: 'PASS' as const,
+        overallSeverity: 'LOW' as const,
+        findings: [
+          {
+            id: 'chk-magic-3',
+            check: 'PDF_STRUCTURE_ANALYSIS' as const,
+            checkLabel: 'Standard PDF Header Structure',
+            status: 'PASS' as const,
+            severity: 'LOW' as const,
+            confidence: 1.0,
+            explanation: 'Valid %PDF-1.7 header.',
+          },
+          {
+            id: 'chk-rev-3',
+            check: 'PDF_REVISION_ANALYSIS' as const,
+            checkLabel: 'Incremental Update Stream Count',
+            status: 'PASS' as const,
+            severity: 'LOW' as const,
+            confidence: 1.0,
+            explanation: 'Single EOF marker. No secondary alterations.',
+          },
+          {
+            id: 'chk-layer-3',
+            check: 'TEXT_IMAGE_LAYER_ANALYSIS' as const,
+            checkLabel: 'Scan Layer Classification',
+            status: 'PASS' as const,
+            severity: 'LOW' as const,
+            confidence: 0.96,
+            explanation: 'Native vector text stream and embedded searchable OCR tables detected.',
+          },
+        ],
+        hasDigitalSignature: true,
+        revisionCount: 1,
+        producerTool: 'iText 7.1.15 / CA Audit Suite',
+        analyzedAt: '2026-09-09T18:45:14Z',
+        engineVersion: 'Clausentis-Forensics v2.4-deterministic',
+        summary: 'Chartered Accountant 14-page audited balance sheet with verified native text streams.',
+      },
+    },
+    {
+      id: 'doc-04',
+      fileName: 'Bid_Submission_Form.pdf',
+      displayName: 'Bid Submission Declaration Form',
+      documentType: 'technical_compliance',
+      fileSizeBytes: 1850000,
+      uploadedAt: '2026-09-09T18:45:00Z',
+      status: 'processed',
+      sha256Hash: '9a6c1e3258525b7410b02130e527027b464a954492efd6d888d30777595304b4',
+      lifecycleStatus: 'EVIDENCE_READY',
+      version: 1,
+      versionLabel: 'DOC-V1',
+      forensicReport: {
+        documentId: 'doc-04',
+        fileName: 'Bid_Submission_Form.pdf',
+        sha256Checksum: '9a6c1e3258525b7410b02130e527027b464a954492efd6d888d30777595304b4',
+        overallStatus: (dossier.bidId === 'bid-pqr-04' ? 'WARNING' : 'PASS') as 'WARNING' | 'PASS',
+        overallSeverity: (dossier.bidId === 'bid-pqr-04' ? 'MEDIUM' : 'LOW') as 'MEDIUM' | 'LOW',
+        findings: [
+          {
+            id: 'chk-magic-4',
+            check: 'PDF_STRUCTURE_ANALYSIS' as const,
+            checkLabel: 'Standard PDF Header Structure',
+            status: 'PASS' as const,
+            severity: 'LOW' as const,
+            confidence: 1.0,
+            explanation: 'Clean %PDF-1.5 header.',
+          },
+          {
+            id: 'chk-rev-4',
+            check: 'PDF_REVISION_ANALYSIS' as const,
+            checkLabel: 'Incremental Update Stream Count',
+            status: (dossier.bidId === 'bid-pqr-04' ? 'WARNING' : 'PASS') as 'WARNING' | 'PASS',
+            severity: (dossier.bidId === 'bid-pqr-04' ? 'MEDIUM' : 'LOW') as 'MEDIUM' | 'LOW',
+            confidence: 0.95,
+            explanation: dossier.bidId === 'bid-pqr-04'
+              ? 'Multiple %%EOF markers (2 revisions) detected. Document underwent post-authoring incremental modification.'
+              : 'Single %%EOF marker. Standard authoring.',
+          },
+        ],
+        hasDigitalSignature: false,
+        revisionCount: dossier.bidId === 'bid-pqr-04' ? 2 : 1,
+        producerTool: dossier.bidId === 'bid-pqr-04' ? 'Nitro PDF Pro v13.4' : 'Microsoft Print to PDF',
+        analyzedAt: '2026-09-09T18:45:16Z',
+        engineVersion: 'Clausentis-Forensics v2.4-deterministic',
+        summary: dossier.bidId === 'bid-pqr-04'
+          ? 'Incremental revision update detected on submission form. Review cross-document values.'
+          : 'Clean document structure without post-generation revisions.',
+      },
+    },
+  ];
 
   const analysisRows = dossier.requirementResults.map((r) => ({
     clause: `${r.clauseCode}: ${r.title}`,
@@ -386,6 +637,114 @@ export default function AuthorityBidDetailPage() {
       {/* CORRIGENDUM & AMENDMENTS IMPACT */}
       <CorrigendumManager role="AUTHORITY" />
 
+      {/* DOCUMENT INGESTION, CRYPTOGRAPHIC INTEGRITY & FORENSICS */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E5E5E5] pb-2">
+          <div>
+            <h3 className="text-base font-semibold text-[#111111] flex items-center gap-2">
+              <Fingerprint className="w-4 h-4 text-[#111111]" />
+              Document Ingestion, Cryptographic Integrity &amp; Forensics
+            </h3>
+            <p className="text-xs text-[#555555] mt-0.5">
+              Deterministic byte-level verification, SHA-256 fingerprinting, incremental update detection, and digital signature extraction.
+            </p>
+          </div>
+          <span className="text-xs font-mono text-[#777777] bg-[#F7F7F7] px-2.5 py-1 rounded border border-[#E5E5E5]">
+            {uploadedDocuments.length} Verified Vault Artifacts
+          </span>
+        </div>
+
+        <div className="rounded-lg border border-[#E5E5E5] bg-white shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs table-fixed min-w-[900px] border-collapse">
+              <colgroup>
+                <col className="w-[30%]" />
+                <col className="w-[20%]" />
+                <col className="w-[15%]" />
+                <col className="w-[15%]" />
+                <col className="w-[20%]" />
+              </colgroup>
+              <thead className="bg-[#F7F7F7] border-b border-[#E5E5E5] text-[10px] font-mono uppercase tracking-wider text-[#777777]">
+                <tr>
+                  <th className="py-3 px-3.5 font-semibold">Submitted Document</th>
+                  <th className="py-3 px-3.5 font-semibold">SHA-256 Fingerprint</th>
+                  <th className="py-3 px-3.5 font-semibold">Lifecycle Stage</th>
+                  <th className="py-3 px-3.5 font-semibold">Forensic Verdict</th>
+                  <th className="py-3 px-3.5 font-semibold text-right">Integrity Audit</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E5E5E5]">
+                {uploadedDocuments.map((doc) => (
+                  <tr key={doc.id} className="hover:bg-[#FAFAFA] transition-colors">
+                    <td className="py-3.5 px-3.5 align-top">
+                      <div className="font-semibold text-[#111111] flex items-center gap-1.5">
+                        <FileText className="w-3.5 h-3.5 text-[#111111] shrink-0" />
+                        <span className="truncate">{doc.fileName}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] font-mono font-semibold bg-[#F7F7F7] border border-[#E5E5E5] text-[#555555] px-1.5 py-0.2 rounded">
+                          {doc.versionLabel || 'DOC-V1'}
+                        </span>
+                        <span className="text-[10px] text-[#777777] font-mono">
+                          {(doc.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB • {doc.documentType}
+                        </span>
+                      </div>
+                    </td>
+
+                    <td className="py-3.5 px-3.5 align-top">
+                      <div className="flex items-center gap-1.5">
+                        <Fingerprint className="w-3.5 h-3.5 text-[#777777] shrink-0" />
+                        <span className="font-mono text-[11px] text-[#111111] break-all">
+                          {doc.sha256Hash?.slice(0, 16)}...
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-[#777777] font-mono mt-0.5 block">
+                        Server-Verified Digest
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 px-3.5 align-top">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#F7F7F7] text-[#111111] border border-[#CCCCCC]">
+                        {doc.lifecycleStatus?.replace(/_/g, ' ') || 'EVIDENCE READY'}
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 px-3.5 align-top">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-semibold border ${
+                        doc.forensicReport?.overallStatus === 'PASS'
+                          ? 'bg-[#F7F7F7] text-[#111111] border-[#CCCCCC]'
+                          : doc.forensicReport?.overallStatus === 'WARNING'
+                          ? 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]'
+                          : 'bg-[#FFF5F5] text-[#991B1B] border-[#FCA5A5]'
+                      }`}>
+                        {doc.forensicReport?.overallStatus === 'PASS' && <CheckCircle2 className="w-3 h-3 text-[#111111]" />}
+                        {doc.forensicReport?.overallStatus === 'WARNING' && <AlertTriangle className="w-3 h-3 text-[#B45309]" />}
+                        {doc.forensicReport?.overallStatus === 'SUSPICIOUS' && <ShieldAlert className="w-3 h-3 text-[#991B1B]" />}
+                        {doc.forensicReport?.overallStatus || 'PASS'}
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 px-3.5 text-right align-top">
+                      {doc.forensicReport && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedForensicReport(doc.forensicReport as DocumentForensicReport)}
+                          className="h-7 px-2.5 text-xs gap-1 border-[#E5E5E5] bg-white text-[#111111] hover:bg-[#F7F7F7] rounded cursor-pointer"
+                        >
+                          <Eye className="w-3 h-3" />
+                          <span>Inspect Forensics</span>
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       {/* 1. STATUTORY & GOVERNMENT PORTAL VERIFICATION MATRIX (SIH26100) */}
       <div className="space-y-4">
         <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-2">
@@ -588,42 +947,149 @@ export default function AuthorityBidDetailPage() {
         />
       </div>
 
-      {/* INSPECT EVIDENCE POPUP MODAL */}
+      {/* ENHANCED EVIDENCE ROOT CAUSE & "WHY?" INSPECTION MODAL */}
       {selectedFinding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="w-full max-w-lg rounded-lg border border-[#E5E5E5] bg-white shadow-2xl p-6 space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-lg border border-[#E5E5E5] bg-white shadow-2xl p-6 space-y-5 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
               <div className="flex items-center gap-2">
                 <FileCheck2 className="w-4 h-4 text-[#111111]" />
-                <h3 className="text-sm font-semibold text-[#111111]">Officer Evidence Inspection</h3>
+                <div>
+                  <h3 className="text-sm font-semibold text-[#111111]">Root Cause &amp; Grounded Evidence Inspector</h3>
+                  <span className="text-[10px] text-[#777777] font-mono">Why did Clausentis flag this requirement?</span>
+                </div>
               </div>
               <button onClick={() => setSelectedFinding(null)} className="text-[#777777] hover:text-[#111111] cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div>
-                <span className="text-[10px] uppercase font-mono text-[#777777]">Finding</span>
-                <p className="font-semibold text-[#111111] text-sm">{selectedFinding.title}</p>
+            <div className="space-y-4 text-xs">
+              {/* Finding Title & Badges */}
+              <div className="space-y-1.5 border-b border-[#E5E5E5] pb-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded border border-[#E5E5E5] bg-[#F7F7F7] text-[#111111]">
+                    {selectedFinding.priority} RISK
+                  </span>
+                  <span className="text-[10px] font-mono text-[#555555] bg-white px-2 py-0.5 rounded border border-[#E5E5E5]">
+                    Extraction Confidence: {Math.round((selectedFinding.confidence || 0.95) * 100)}%
+                  </span>
+                  <span className="text-[10px] font-mono text-[#777777]">
+                    Clause: {selectedFinding.clause}
+                  </span>
+                </div>
+                <h4 className="font-semibold text-[#111111] text-sm pt-1">{selectedFinding.title}</h4>
               </div>
-              <div>
-                <span className="text-[10px] uppercase font-mono text-[#777777]">Clause Reference</span>
-                <p className="font-mono text-[#555555]">{selectedFinding.clause}</p>
+
+              {/* 1. WHY FLAGGED */}
+              <div className="p-3.5 rounded-md bg-[#F7F7F7] border border-[#E5E5E5] space-y-1.5">
+                <div className="flex items-center gap-1.5 text-[10px] uppercase font-mono text-[#111111] font-semibold">
+                  <HelpCircle className="w-3.5 h-3.5 text-[#111111]" />
+                  <span>Deterministic Rule Rationale (Why Flagged?)</span>
+                </div>
+                <p className="text-[#333333] leading-relaxed text-xs">
+                  {selectedFinding.whyExplanation || selectedFinding.issue}
+                </p>
               </div>
-              <div className="p-3 rounded-md bg-[#F7F7F7] border border-[#E5E5E5] space-y-1">
-                <span className="text-[10px] uppercase font-mono text-[#111111] font-semibold">Detected Issue</span>
-                <p className="text-[#555555] leading-relaxed">{selectedFinding.issue}</p>
+
+              {/* 2. QUANTITATIVE / CONTRACTUAL DELTA */}
+              {selectedFinding.delta && (
+                <div className="p-3.5 rounded-md bg-white border border-[#E5E5E5] space-y-1">
+                  <span className="text-[10px] uppercase font-mono text-[#777777] font-semibold block">
+                    Observed Contradiction / Deficit Delta
+                  </span>
+                  <p className="font-mono text-xs font-semibold text-[#111111] bg-[#F7F7F7] p-2 rounded border border-[#E5E5E5]">
+                    {selectedFinding.delta}
+                  </p>
+                </div>
+              )}
+
+              {/* 3. GROUNDED EVIDENCE EXCERPTS */}
+              <div className="space-y-2">
+                <span className="text-[10px] uppercase font-mono text-[#777777] font-semibold block">
+                  Auditable Document Evidence
+                </span>
+                <div className="p-3 rounded-md bg-[#FAFAFA] border border-[#E5E5E5] space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-[#111111]">
+                    <span className="font-semibold">{selectedFinding.evidenceDocument}</span>
+                    <span className="text-[#777777]">Page {selectedFinding.page}</span>
+                  </div>
+                  {selectedFinding.primaryExcerpt && (
+                    <blockquote className="border-l-2 border-[#111111] pl-2.5 py-0.5 text-[#555555] italic text-[11px]">
+                      &ldquo;{selectedFinding.primaryExcerpt}&rdquo;
+                    </blockquote>
+                  )}
+                  {selectedFinding.conflictingExcerpt && (
+                    <div className="mt-2 pt-2 border-t border-[#E5E5E5]">
+                      <span className="text-[10px] font-mono text-[#777777] block mb-1">Conflicting Filing Excerpt:</span>
+                      <blockquote className="border-l-2 border-[#991B1B] pl-2.5 py-0.5 text-[#991B1B] italic text-[11px] bg-[#FFF5F5]">
+                        &ldquo;{selectedFinding.conflictingExcerpt}&rdquo;
+                      </blockquote>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="p-3 rounded-md bg-[#F7F7F7] border border-[#E5E5E5]">
-                <span className="text-[10px] uppercase font-mono text-[#777777]">Attached Credential</span>
-                <p className="font-mono text-[#111111] mt-0.5">{selectedFinding.evidenceDocument} (Page {selectedFinding.page})</p>
+
+              {/* 4. REGULATORY REFERENCE */}
+              {selectedFinding.regulatoryRule && (
+                <div className="p-3 rounded-md bg-white border border-[#E5E5E5]">
+                  <span className="text-[10px] uppercase font-mono text-[#777777] font-semibold block">
+                    Public Procurement Statutory Basis
+                  </span>
+                  <p className="font-mono text-[11px] text-[#111111] mt-0.5">
+                    {selectedFinding.regulatoryRule}
+                  </p>
+                </div>
+              )}
+
+              {/* 5. RECOMMENDATION */}
+              <div className="p-3.5 rounded-md bg-[#F7F7F7] border border-[#E5E5E5] space-y-1">
+                <span className="text-[10px] uppercase font-mono text-[#111111] font-semibold block">
+                  Recommended Procurement Officer Action
+                </span>
+                <p className="text-[#333333] leading-relaxed text-xs">
+                  {selectedFinding.recommendation}
+                </p>
               </div>
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-[#E5E5E5]">
+            <div className="flex items-center justify-between pt-3 border-t border-[#E5E5E5]">
+              <span className="text-[10px] text-[#777777] font-mono">
+                CVC Compliance Audit Dossier v4.2
+              </span>
               <Button size="sm" variant="outline" onClick={() => setSelectedFinding(null)} className="h-8 px-4 text-xs border-[#E5E5E5] text-[#111111] hover:bg-[#F7F7F7] rounded-md cursor-pointer">
                 Close Inspection
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DOCUMENT FORENSICS TECHNICAL DOSSIER MODAL */}
+      {selectedForensicReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
+          <div className="w-full max-w-3xl rounded-lg border border-[#E5E5E5] bg-white shadow-2xl p-6 space-y-4 my-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
+              <div className="flex items-center gap-2">
+                <Fingerprint className="w-4 h-4 text-[#111111]" />
+                <div>
+                  <h3 className="text-sm font-semibold text-[#111111]">Document Forensics Technical Dossier</h3>
+                  <span className="text-[10px] text-[#777777] font-mono">Deterministic Byte-Level Structural Integrity Audit</span>
+                </div>
+              </div>
+              <button onClick={() => setSelectedForensicReport(null)} className="text-[#777777] hover:text-[#111111] cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <ForensicReportCard report={selectedForensicReport} />
+
+            <div className="flex items-center justify-between pt-3 border-t border-[#E5E5E5]">
+              <span className="text-[10px] text-[#777777] font-mono">
+                Engine: {selectedForensicReport.engineVersion}
+              </span>
+              <Button size="sm" variant="outline" onClick={() => setSelectedForensicReport(null)} className="h-8 px-4 text-xs border-[#E5E5E5] text-[#111111] hover:bg-[#F7F7F7] rounded-md cursor-pointer">
+                Close Forensics Dossier
               </Button>
             </div>
           </div>

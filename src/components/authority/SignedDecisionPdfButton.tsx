@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Loader2, AlertCircle, FileCheck2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { createSignedDecisionPdfDocument } from '@/lib/pdf/signed-decision-pdf-generator';
+import { downloadSignedDecisionPdf } from '@/lib/pdf/signed-decision-pdf-generator';
 import { getLatestProcurementDecision } from '@/lib/actions/decisions';
 import type { ProcurementDecisionRecord } from '@/types/procurement-decision';
 import type { BidderEvaluationDossier } from '@/lib/compliance/types';
@@ -55,7 +55,7 @@ export function SignedDecisionPdfButton({
         throw new Error('A signed decision record is required to export the PDF.');
       }
 
-      const doc = createSignedDecisionPdfDocument({
+      const result = await downloadSignedDecisionPdf({
         decision: activeDecision,
         dossier,
         tenderTitle: tenderTitle || dossier?.tenderTitle,
@@ -63,8 +63,9 @@ export function SignedDecisionPdfButton({
         tenderOrganisation: activeDecision.organisation || 'Chennai Petroleum Corporation Limited',
       });
 
-      const filename = `Clausentis_Decision_${activeDecision.decision_id || 'RECORD'}.pdf`;
-      doc.save(filename);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to download PDF.');
+      }
     } catch (err: unknown) {
       console.error('[SignedDecisionPdfButton] Download failed:', err);
       setErrorMsg((err as Error)?.message || 'Failed to generate PDF.');

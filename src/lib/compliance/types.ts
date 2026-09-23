@@ -188,6 +188,7 @@ export interface BidderEvaluationDossier {
     status?: string;
   };
   auditEvents?: AuditPdfRecord[];
+  documents?: import('@/types/tender-discovery').BidUploadedDocument[];
 }
 
 export interface AuditPdfRecord {

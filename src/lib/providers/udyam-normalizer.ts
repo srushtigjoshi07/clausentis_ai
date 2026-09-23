@@ -94,6 +94,33 @@ export function compareUdyamRecord(
     };
   }
 
+  // 1.1 Authoritative Source Unavailable / Offline
+  if (submittedUdyam.includes('UNAVAILABLE') || submittedUdyam.includes('OFFLINE')) {
+    return {
+      providerId: 'udyam',
+      providerName: 'Ministry of MSME (Udyam Verification)',
+      verificationMode: mode,
+      status: 'UNABLE_TO_VERIFY',
+      identifierQueried: submittedUdyam,
+      statusMessage: 'Unable to verify: Authoritative Ministry of MSME registry portal gateway is currently unreachable. Officer manual review required.',
+      fieldComparisons: [
+        {
+          fieldName: 'gatewayAvailability',
+          fieldLabel: 'Gateway Availability',
+          submittedValue: submittedUdyam,
+          governmentValue: 'SOURCE_UNAVAILABLE',
+          status: 'NOT_AVAILABLE',
+          isKeyField: true,
+        },
+      ],
+      matchedFields: [],
+      mismatchedFields: [],
+      verifiedAt,
+      sourceReference: 'Ministry of MSME Registry Gateway (Connection Timeout)',
+      submittedRecord: submitted as Record<string, unknown>,
+    };
+  }
+
   // 2. Not Found in Government Registry
   if (!govtRecord) {
     return {

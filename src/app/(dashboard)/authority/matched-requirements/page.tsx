@@ -3,21 +3,20 @@ import { getAllBidderDossiers, STANDARD_CPCL_REQUIREMENTS } from '@/lib/complian
 import { VisualComplianceAnalysisCenter } from '@/components/compliance/VisualComplianceAnalysisCenter';
 
 export const metadata = {
-  title: 'Matched Requirements & Compliance Analysis Center | Clausentis Authority',
+  title: 'Matched Requirements Analysis Center | Clausentis Authority',
   description: 'Evidence-grounded qualification and requirement matching analysis across submitted bidder proposals.',
 };
 
-interface AuthorityCompliancePageProps {
+interface AuthorityMatchedRequirementsPageProps {
   searchParams?: Promise<{ bidId?: string }>;
 }
 
-export default async function AuthorityCompliancePage({ searchParams }: AuthorityCompliancePageProps) {
+export default async function AuthorityMatchedRequirementsPage({ searchParams }: AuthorityMatchedRequirementsPageProps) {
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const tenderId = 'tender-cpcl-2026-0412';
   const dossiers = getAllBidderDossiers(tenderId);
   const requirements = STANDARD_CPCL_REQUIREMENTS;
 
-  // Selected dossier from query param or default to primary evaluated bidder (Apex)
   const initialDossier = (resolvedSearchParams?.bidId && dossiers.find(d => d.bidId === resolvedSearchParams.bidId))
     || dossiers.find(d => d.bidId === 'bid-apex-02')
     || dossiers[0];

@@ -27,6 +27,7 @@ import { processBidderDocumentAction } from '@/lib/actions/bid-document-processo
 import type { BidUploadedDocument, DiscoveredTender } from '@/types/tender-discovery';
 import { getBidUploadGuidance } from '@/lib/tender-discovery/bid-upload-guidance';
 import { GovernmentVerificationCard } from '@/components/compliance/GovernmentVerificationCard';
+import { ForensicReportCard } from '@/components/forensics/ForensicReportCard';
 import type { GovernmentRecordComparisonResult } from '@/lib/providers/types';
 
 interface BidDocumentUploaderProps {
@@ -61,6 +62,7 @@ export function BidDocumentUploader({
   const [dragActive, setDragActive] = useState(false);
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [expandedGovtDocs, setExpandedGovtDocs] = useState<Record<string, boolean>>({});
+  const [expandedForensicDocs, setExpandedForensicDocs] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const guidance = getBidUploadGuidance(selectedType, tender);
@@ -362,9 +364,17 @@ export function BidDocumentUploader({
                           <span className="font-medium text-[#111111] truncate max-w-sm sm:max-w-md">
                             {doc.fileName}
                           </span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#F7F7F7] text-[#111111] border border-[#E5E5E5]">
+                            {doc.versionLabel || 'DOC-V1'}
+                          </span>
                           <span className="text-[11px] text-[#777777] font-mono">
                             ({(doc.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB)
                           </span>
+                          {doc.sha256Hash && (
+                            <span className="text-[10px] font-mono text-[#777777] hidden md:inline" title={doc.sha256Hash}>
+                              SHA-256: {doc.sha256Hash.substring(0, 8)}...
+                            </span>
+                          )}
                         </div>
 
                         {/* Inline Tag Selector */}
@@ -384,44 +394,44 @@ export function BidDocumentUploader({
                         </div>
 
                         {/* Extracted Evidence Chips */}
-                        {doc.extractedFacts && Object.keys(doc.extractedFacts).length > 0 && (
+                        {((doc.extractedFacts && Object.keys(doc.extractedFacts).length > 0) || doc.forensicReport) && (
                           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                            {typeof doc.extractedFacts.turnover === 'number' && (
+                            {typeof doc.extractedFacts?.turnover === 'number' && (
                               <span className="inline-flex items-center text-[10px] font-mono font-medium text-[#111111] bg-[#F0F0F0] px-1.5 py-0.5 rounded border border-[#E0E0E0]">
                                 Turnover: ₹{doc.extractedFacts.turnover.toFixed(2)} Cr {doc.extractedFacts.turnoverPage ? `(p.${doc.extractedFacts.turnoverPage})` : ''}
                               </span>
                             )}
-                            {typeof doc.extractedFacts.experienceYears === 'number' && (
+                            {typeof doc.extractedFacts?.experienceYears === 'number' && (
                               <span className="inline-flex items-center text-[10px] font-mono font-medium text-[#111111] bg-[#F0F0F0] px-1.5 py-0.5 rounded border border-[#E0E0E0]">
                                 Exp: {doc.extractedFacts.experienceYears.toFixed(1)} Yrs {doc.extractedFacts.experiencePage ? `(p.${doc.extractedFacts.experiencePage})` : ''}
                               </span>
                             )}
-                            {typeof doc.extractedFacts.localContentPercentage === 'number' && (
+                            {typeof doc.extractedFacts?.localContentPercentage === 'number' && (
                               <span className="inline-flex items-center text-[10px] font-mono font-medium text-[#111111] bg-[#F0F0F0] px-1.5 py-0.5 rounded border border-[#E0E0E0]">
                                 Local Content: {doc.extractedFacts.localContentPercentage}%
                               </span>
                             )}
-                            {typeof doc.extractedFacts.gstin === 'string' && (
+                            {typeof doc.extractedFacts?.gstin === 'string' && (
                               <span className="inline-flex items-center text-[10px] font-mono text-[#333333] bg-[#FAFAFA] px-1.5 py-0.5 rounded border border-[#E5E5E5]">
                                 GSTIN: {doc.extractedFacts.gstin}
                               </span>
                             )}
-                            {typeof doc.extractedFacts.pan === 'string' && (
+                            {typeof doc.extractedFacts?.pan === 'string' && (
                               <span className="inline-flex items-center text-[10px] font-mono text-[#333333] bg-[#FAFAFA] px-1.5 py-0.5 rounded border border-[#E5E5E5]">
                                 PAN: {doc.extractedFacts.pan}
                               </span>
                             )}
-                            {typeof doc.extractedFacts.udyamNumber === 'string' && (
+                            {typeof doc.extractedFacts?.udyamNumber === 'string' && (
                               <span className="inline-flex items-center text-[10px] font-mono text-[#333333] bg-[#FAFAFA] px-1.5 py-0.5 rounded border border-[#E5E5E5]">
                                 Udyam: {doc.extractedFacts.udyamNumber}
                               </span>
                             )}
-                            {doc.extractedFacts.isNonDebarred !== undefined && (
+                            {doc.extractedFacts?.isNonDebarred !== undefined && (
                               <span className="inline-flex items-center text-[10px] font-mono text-[#111111] bg-[#F0F0F0] px-1.5 py-0.5 rounded border border-[#E0E0E0]">
                                 Non-Debarred Verified
                               </span>
                             )}
-                            {doc.extractedFacts.deviationsCount !== undefined && (
+                            {doc.extractedFacts?.deviationsCount !== undefined && (
                               <span className="inline-flex items-center text-[10px] font-mono text-[#111111] bg-[#F0F0F0] px-1.5 py-0.5 rounded border border-[#E0E0E0]">
                                 {doc.extractedFacts.deviationsCount === 0 ? 'Nil Deviations' : `${doc.extractedFacts.deviationsCount} Deviation(s)`}
                               </span>
@@ -450,21 +460,54 @@ export function BidDocumentUploader({
                                 </span>
                               </button>
                             )}
+                            {doc.forensicReport && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpandedForensicDocs((prev) => ({
+                                    ...prev,
+                                    [doc.id]: !prev[doc.id],
+                                  }))
+                                }
+                                className={`inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded border cursor-pointer transition-colors ${
+                                  doc.forensicReport.overallStatus === 'PASS'
+                                    ? 'bg-[#F7F7F7] text-[#111111] border-[#CCCCCC] hover:bg-[#EAEAEA]'
+                                    : doc.forensicReport.overallStatus === 'SUSPICIOUS'
+                                    ? 'bg-[#FFFBEB] text-[#92400E] border-[#FDE68A] hover:bg-[#FEF3C7]'
+                                    : 'bg-[#FEF2F2] text-[#991B1B] border-[#FECACA] hover:bg-[#FEE2E2]'
+                                }`}
+                              >
+                                <span className="font-semibold">Forensics:</span>
+                                <span>{doc.forensicReport.overallStatus}</span>
+                                <span className="underline ml-0.5 text-[9px]">
+                                  {expandedForensicDocs[doc.id] ? 'Hide' : 'Inspect'}
+                                </span>
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#F5F5F5]">
-                      {doc.status === 'processing' ? (
+                      {doc.status === 'processing' || doc.lifecycleStatus === 'PROCESSING' || doc.lifecycleStatus === 'EXTRACTING' || doc.lifecycleStatus === 'FORENSIC_ANALYSIS' ? (
                         <span className="inline-flex items-center gap-1.5 text-[11px] font-mono text-[#555555] bg-[#F7F7F7] px-2.5 py-1 rounded border border-[#E5E5E5]">
                           <Loader2 className="h-3 w-3 animate-spin text-[#111111]" />
-                          Extracting Evidence...
+                          {doc.lifecycleStatus === 'EXTRACTING'
+                            ? 'Extracting Facts...'
+                            : doc.lifecycleStatus === 'FORENSIC_ANALYSIS'
+                            ? 'Forensic Analysis...'
+                            : 'Processing Pipeline...'}
+                        </span>
+                      ) : doc.status === 'failed' || doc.lifecycleStatus === 'PROCESSING_FAILED' || doc.lifecycleStatus === 'EXTRACTION_FAILED' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-mono text-[#991B1B] bg-[#FEF2F2] px-2.5 py-1 rounded border border-[#FECACA]">
+                          <AlertTriangle className="h-3 w-3 text-[#991B1B]" />
+                          Ingestion Failed
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[11px] font-mono text-[#111111] bg-[#F7F7F7] px-2.5 py-1 rounded border border-[#E5E5E5]">
                           <CheckCircle2 className="h-3 w-3 text-[#111111]" />
-                          Processed
+                          Evidence Ready
                         </span>
                       )}
 
@@ -483,6 +526,13 @@ export function BidDocumentUploader({
                   {govtVerif && isExpanded && (
                     <div className="pt-2 border-t border-[#EEEEEE]">
                       <GovernmentVerificationCard verification={govtVerif} />
+                    </div>
+                  )}
+
+                  {/* Expandable Forensics Report Card */}
+                  {doc.forensicReport && expandedForensicDocs[doc.id] && (
+                    <div className="pt-2 border-t border-[#EEEEEE]">
+                      <ForensicReportCard report={doc.forensicReport} />
                     </div>
                   )}
                 </div>

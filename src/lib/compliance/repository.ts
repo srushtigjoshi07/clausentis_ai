@@ -1013,9 +1013,17 @@ initializeCanonicalScenarios();
  */
 export function getAllBidderDossiers(tenderId?: string): BidderEvaluationDossier[] {
   initializeCanonicalScenarios();
-  const list = Array.from(IN_MEMORY_DOSSIERS.values());
-  if (!tenderId) return list;
-  return list.filter((d) => d.tenderId === tenderId);
+  const seen = new Set<string>();
+  const uniqueList: BidderEvaluationDossier[] = [];
+  for (const dossier of IN_MEMORY_DOSSIERS.values()) {
+    if (dossier.bidId && !seen.has(dossier.bidId)) {
+      seen.add(dossier.bidId);
+      if (!tenderId || dossier.tenderId === tenderId) {
+        uniqueList.push(dossier);
+      }
+    }
+  }
+  return uniqueList;
 }
 
 /**
