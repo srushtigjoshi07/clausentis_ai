@@ -1,8 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { redirect, unstable_rethrow } from 'next/navigation';
 import { cookies, headers } from 'next/headers';
+
 import { createClient } from '@/lib/supabase/server';
 import { classifyAuthError, type AuthErrorCode } from '@/lib/auth/errors';
 import type { UserRole, UserProfile } from '@/types/auth-roles';
@@ -46,7 +47,6 @@ export interface AuthActionResult {
 export async function login(formData: FormData): Promise<AuthActionResult | void> {
   const email = (formData.get('email') as string)?.trim() || '';
   const password = (formData.get('password') as string) || '';
-  const selectedRole = (formData.get('role') as UserRole) || 'bidder';
 
   if (!email) {
     return {
@@ -120,45 +120,19 @@ export async function login(formData: FormData): Promise<AuthActionResult | void
     }
 
     const user = authData.user;
-    let role: UserRole = selectedRole;
 
-    if (user) {
-      // Attempt reading authoritative persisted role from profiles table
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role, company_name, full_name')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (profile?.role) {
-          // Enforce the securely persisted database role
-          role = profile.role as UserRole;
-        } else {
-          // If profile row doesn't have a role, update it with selectedRole
-          await supabase
-            .from('profiles')
-            .update({
-              role: selectedRole,
-              company_name: selectedRole === 'tender_authority'
-                ? 'Chennai Petroleum Corporation Limited'
-                : 'Apex Heavy Engineering Pvt Ltd',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', user.id);
-        }
-      } catch (err) {
-        console.warn('Profile read warning on login:', err);
-        // Fallback to user_metadata role if present
-        if (user.user_metadata?.role) {
-          role = user.user_metadata.role as UserRole;
-        }
-      }
-
-      // Set secure cookies for middleware route guarding
-      const cookieStore = await cookies();
-      cookieStore.set('clausentis_role', role, { path: '/', maxAge: 60 * 60 * 24 * 30 });
-      cookieStore.set('clausentis_user_id', user.id, { path: '/', maxAge: 60 * 60 * 24 * 30 });
+    // The persisted profile role is the only source of truth. The role picked on
+    // the login form is ignored so a bidder cannot sign in "as" an authority.
+    let role: UserRole = 'bidder';
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (profile?.role === 'tender_authority') role = 'tender_authority';
+    } catch (err) {
+      console.warn('Profile read warning on login:', err);
     }
 
     revalidatePath('/', 'layout');
@@ -168,10 +142,8 @@ export async function login(formData: FormData): Promise<AuthActionResult | void
     } else {
       redirect('/bidder/dashboard');
     }
-  } catch (err: any) {
-    if (err?.digest?.startsWith('NEXT_REDIRECT') || err?.message === 'NEXT_REDIRECT') {
-      throw err;
-    }
+  } catch (err: unknown) {
+    unstable_rethrow(err);
 
     const classified = classifyAuthError(err);
     return {
@@ -297,10 +269,6 @@ export async function signup(formData: FormData): Promise<AuthActionResult | voi
         console.warn('Profile update fallback on signup:', dbErr);
       }
 
-      const cookieStore = await cookies();
-      cookieStore.set('clausentis_role', role, { path: '/', maxAge: 60 * 60 * 24 * 30 });
-      cookieStore.set('clausentis_user_id', authData.user.id, { path: '/', maxAge: 60 * 60 * 24 * 30 });
-
       revalidatePath('/', 'layout');
 
       if (role === 'tender_authority') {
@@ -314,10 +282,8 @@ export async function signup(formData: FormData): Promise<AuthActionResult | voi
       success: true,
       message: 'Registration completed successfully.',
     };
-  } catch (err: any) {
-    if (err?.digest?.startsWith('NEXT_REDIRECT') || err?.message === 'NEXT_REDIRECT') {
-      throw err;
-    }
+  } catch (err: unknown) {
+    unstable_rethrow(err);
 
     const classified = classifyAuthError(err);
     return {
@@ -336,9 +302,6 @@ export async function getUserProfile(): Promise<UserProfile | null> {
 
   if (!user) return null;
 
-  const cookieStore = await cookies();
-  const cachedRole = (cookieStore.get('clausentis_role')?.value as UserRole) || 'bidder';
-
   try {
     const { data } = await supabase
       .from('profiles')
@@ -347,7 +310,7 @@ export async function getUserProfile(): Promise<UserProfile | null> {
       .maybeSingle();
 
     if (data) {
-      const resolvedRole = (data.role as UserRole) || (user.user_metadata?.role as UserRole) || cachedRole;
+      const resolvedRole: UserRole = data.role === 'tender_authority' ? 'tender_authority' : 'bidder';
       return {
         id: data.id,
         email: user.email || '',
@@ -363,46 +326,16 @@ export async function getUserProfile(): Promise<UserProfile | null> {
     console.warn('Failed to load profile from DB, using fallback:', err);
   }
 
-  const fallbackRole = (user.user_metadata?.role as UserRole) || cachedRole;
+  // Without a readable profile row we cannot confirm an elevated role.
   return {
     id: user.id,
     email: user.email!,
     fullName: user.user_metadata?.full_name || 'Procurement User',
-    role: fallbackRole,
-    organisationName: user.user_metadata?.organisation_name ||
-      (fallbackRole === 'tender_authority' ? 'Chennai Petroleum Corporation Limited' : 'Apex Heavy Engineering Pvt Ltd'),
+    role: 'bidder',
+    organisationName: user.user_metadata?.organisation_name || 'Apex Heavy Engineering Pvt Ltd',
     createdAt: user.created_at,
     updatedAt: user.created_at,
   };
-}
-
-export async function switchRoleFormAction(formData: FormData) {
-  const role = (formData.get('role') as UserRole) || 'bidder';
-  await switchRole(role);
-}
-
-export async function switchRole(role: UserRole) {
-  const cookieStore = await cookies();
-  cookieStore.set('clausentis_role', role, { path: '/', maxAge: 60 * 60 * 24 * 30 });
-
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from('profiles').update({ role }).eq('id', user.id);
-      await supabase.auth.updateUser({ data: { role } });
-    }
-  } catch (err) {
-    console.warn('Failed to persist switched role in DB:', err);
-  }
-
-  revalidatePath('/', 'layout');
-
-  if (role === 'tender_authority') {
-    redirect('/authority/dashboard');
-  } else {
-    redirect('/bidder/dashboard');
-  }
 }
 
 export async function logout() {

@@ -13,14 +13,13 @@ import {
   X,
   ShieldCheck, 
   Building2,
-  ArrowRightLeft,
   Files,
   BarChart3,
   Bot,
   Landmark
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { logout, switchRole } from '@/app/auth/actions';
+import { logout } from '@/app/auth/actions';
 import { Button } from '@/components/ui/button';
 
 const routes = [
@@ -109,18 +108,7 @@ export function AuthoritySidebarContent({ pathname, onClose }: { pathname: strin
         </nav>
       </div>
 
-      {/* Role Switcher Demo Action */}
       <div className="p-3 border-t border-border space-y-2">
-        <button
-          type="button"
-          onClick={() => switchRole('bidder')}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#FAFAFA] border border-[#E5E5E5] text-xs text-[#555555] hover:text-[#111111] hover:border-[#CCCCCC] transition-colors cursor-pointer"
-          title="Switch role for demo grading"
-        >
-          <ArrowRightLeft className="w-3.5 h-3.5 text-[#111111]" />
-          <span>Switch to Bidder</span>
-        </button>
-
         <form action={logout}>
           <Button 
             variant="ghost" 

@@ -2,13 +2,12 @@ import React from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
-import { logout, switchRoleFormAction } from '@/app/auth/actions';
+import { logout } from '@/app/auth/actions';
 import { 
   Building2, 
   ShieldCheck, 
   Cpu, 
-  LogOut, 
-  ArrowRightLeft, 
+  LogOut,  
   FileText, 
   Lock, 
   User, 
@@ -186,17 +185,6 @@ export default async function AuthoritySettingsPage() {
           </h3>
 
           <div className="flex flex-wrap items-center gap-3">
-            <form action={switchRoleFormAction}>
-              <input type="hidden" name="role" value="bidder" />
-              <Button 
-                type="submit" 
-                variant="outline" 
-                className="h-9 px-4 text-xs border-[#E5E5E5] text-[#111111] hover:bg-[#F7F7F7] gap-1.5 font-medium cursor-pointer rounded-md"
-              >
-                <ArrowRightLeft className="w-3.5 h-3.5" />
-                <span>Switch to Bidder Portal</span>
-              </Button>
-            </form>
 
             <form action={logout}>
               <Button 

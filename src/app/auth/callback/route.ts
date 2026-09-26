@@ -13,9 +13,9 @@ export async function GET(request: Request) {
 
     if (!error && data?.user) {
       const user = data.user;
-      let role: UserRole = (user.user_metadata?.role as UserRole) || 'bidder';
+      let role: UserRole = 'bidder';
 
-      // Read database profile role if available
+      // The profiles table is the only trusted source of the user's role
       try {
         const { data: profile } = await supabase
           .from('profiles')
@@ -30,11 +30,10 @@ export async function GET(request: Request) {
         console.warn('Profile role lookup in callback error:', err);
       }
 
-      const redirectPath = next || (role === 'tender_authority' ? '/authority/dashboard' : '/bidder/dashboard');
-      const response = NextResponse.redirect(new URL(redirectPath, origin));
-      response.cookies.set('clausentis_role', role, { path: '/', maxAge: 60 * 60 * 24 * 30 });
-      response.cookies.set('clausentis_user_id', user.id, { path: '/', maxAge: 60 * 60 * 24 * 30 });
-      return response;
+      // Only allow same-origin relative paths; "//evil.com" or "https://..." would be an open redirect.
+      const safeNext = next && next.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\') ? next : null;
+      const redirectPath = safeNext || (role === 'tender_authority' ? '/authority/dashboard' : '/bidder/dashboard');
+      return NextResponse.redirect(new URL(redirectPath, origin));
     }
   }
 

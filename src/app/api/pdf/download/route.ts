@@ -14,11 +14,23 @@ import {
 import { getAllBidderDossiers, getBidderDossier, STANDARD_CPCL_REQUIREMENTS } from '@/lib/compliance/repository';
 import { generatePdfFilename } from '@/lib/pdf/pdf-download-helper';
 import { getLatestProcurementDecision } from '@/lib/actions/decisions';
+import { getUserProfile } from '@/app/auth/actions';
+
+// Documents that expose other bidders' data or officer decisions.
+const AUTHORITY_ONLY_TYPES = new Set(['matched-requirements', 'multi-matched-requirements', 'audit', 'signed-decision']);
 
 export async function GET(req: NextRequest) {
+  const profile = await getUserProfile();
+  if (!profile) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const type = searchParams.get('type') || 'matched-requirements';
+    if (AUTHORITY_ONLY_TYPES.has(type) && profile.role !== 'tender_authority') {
+      return NextResponse.json({ error: 'Only Tender Authority officers can download this document' }, { status: 403 });
+    }
     const tenderId = searchParams.get('tenderId') || 'tender-cpcl-2026-0412';
     const bidId = searchParams.get('bidId') || 'bid-apex-02';
 
@@ -66,30 +78,11 @@ export async function GET(req: NextRequest) {
       const dossier = getBidderDossier(bidId) || getAllBidderDossiers()[0];
       filename = generatePdfFilename('signed-decision', dossier.shortName || dossier.bidderName);
       const decRes = await getLatestProcurementDecision(bidId);
-      const decision = decRes.decision || {
-        id: 'dec-uuid-apex-01',
-        decision_id: 'DEC-CPCL-2026-0412-001',
-        tender_id: tenderId,
-        bid_id: bidId,
-        bidder_id: 'CL-2026-91C25F34',
-        bidder_name: dossier.bidderName,
-        officer_user_id: 'officer-cpcl-01',
-        officer_name: 'Dr. R. Venkataraman',
-        officer_email: 'r.venkataraman@cpcl.gov.in',
-        organisation: 'Chennai Petroleum Corporation Limited',
-        officer_role: 'Senior Procurement Officer',
-        decision: 'APPROVED' as const,
-        remarks: 'All mandatory requirements verified against statutory registries and audited accounts.',
-        compliance_score_snapshot: dossier.complianceScore,
-        risk_level_snapshot: dossier.riskLevel,
-        ai_recommendation_snapshot: 'COMPLIANT',
-        signed_at: new Date().toISOString(),
-        decision_version: 1,
-        status: 'SIGNED' as const,
-        integrity_hash: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      // Never render a "signed" PDF for a decision that was not actually signed.
+      const decision = decRes.decision;
+      if (!decision) {
+        return NextResponse.json({ error: 'No signed decision exists for this bid' }, { status: 404 });
+      }
       const uint8 = generateSignedDecisionPdfBuffer({
         decision,
         dossier,

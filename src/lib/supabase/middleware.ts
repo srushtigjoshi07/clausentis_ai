@@ -56,12 +56,18 @@ export async function updateSession(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    // Resolve role from metadata first (immutable from client), then cookie
-    const metadataRole = user?.user_metadata?.role as string | undefined;
-    const roleCookie = request.cookies.get('clausentis_role')?.value;
-    const userRole = metadataRole
-      ? (metadataRole === 'tender_authority' ? 'tender_authority' : 'bidder')
-      : (roleCookie === 'tender_authority' ? 'tender_authority' : 'bidder');
+    // Resolve role from the profiles table only. user_metadata is writable by the
+    // user via supabase.auth.updateUser() and cookies are client-controlled, so
+    // neither can be trusted for authorization.
+    let userRole: 'tender_authority' | 'bidder' = 'bidder';
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+      userRole = profile?.role === 'tender_authority' ? 'tender_authority' : 'bidder';
+    }
 
     // 1. Unauthenticated users cannot access protected routes
     if (isProtectedRoute && !user) {
@@ -94,7 +100,7 @@ export async function updateSession(request: NextRequest) {
       url.pathname = '/authority/dashboard';
       return NextResponse.redirect(url);
     }
-  } catch (err) {
+  } catch {
     if (isProtectedRoute) {
       url.pathname = '/login';
       return NextResponse.redirect(url);

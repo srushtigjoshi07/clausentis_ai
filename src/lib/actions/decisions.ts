@@ -7,7 +7,8 @@ import { computeDecisionIntegrityHash } from '@/lib/compliance/decision-utils';
 import { 
   recordSignedProcurementDecision,
   getSignedProcurementDecision,
-  getAllSignedDecisionsForBid
+  getAllSignedDecisionsForBid,
+  getBidderDossier
 } from '@/lib/compliance/repository';
 import type { 
   SignDecisionPayload, 
@@ -65,7 +66,17 @@ export async function signProcurementDecision(
   }
 
   // 3. Duplicate Signing Guard & Version Calculation
-  const existingDecisions = getAllSignedDecisionsForBid(payload.bidId);
+  // The in-memory repository is per server instance, so the database is consulted too;
+  // otherwise a cold start would allow a second "v1" signature for the same bid.
+  const supabase = await createClient();
+  const { data: dbExisting } = await supabase
+    .from('procurement_decisions')
+    .select('decision_version, status')
+    .eq('bid_id', payload.bidId);
+  const existingDecisions: Array<Pick<ProcurementDecisionRecord, 'decision_version' | 'status'>> = [
+    ...getAllSignedDecisionsForBid(payload.bidId),
+    ...((dbExisting || []) as Array<Pick<ProcurementDecisionRecord, 'decision_version' | 'status'>>),
+  ];
   const activeExisting = existingDecisions.find((d) => d.status === 'SIGNED');
 
   if (activeExisting && !payload.isRevision) {
@@ -75,7 +86,7 @@ export async function signProcurementDecision(
     };
   }
 
-  const decisionVersion = activeExisting ? existingDecisions.length + 1 : 1;
+  const decisionVersion = existingDecisions.reduce((max, d) => Math.max(max, d.decision_version || 0), 0) + 1;
   const shortTenderRef = (payload.tenderReference || payload.tenderId)
     .replace(/[^a-zA-Z0-9]/g, '')
     .slice(-8)
@@ -83,6 +94,13 @@ export async function signProcurementDecision(
   const shortBidId = payload.bidId.replace(/[^a-zA-Z0-9]/g, '').slice(-6).toUpperCase();
   const decisionId = `DEC-${shortTenderRef}-${shortBidId}-V${decisionVersion}`;
   const signedAt = new Date().toISOString();
+
+  // Snapshot the system's own assessment rather than values sent by the browser,
+  // so the sealed record reflects what the officer was actually shown by the engine.
+  const dossier = getBidderDossier(payload.bidId);
+  const complianceScoreSnapshot = dossier?.complianceScore ?? payload.complianceScoreSnapshot;
+  const riskLevelSnapshot = dossier?.riskLevel ?? payload.riskLevelSnapshot;
+  const aiRecommendationSnapshot = dossier?.aiRecommendation?.recommendation ?? payload.aiRecommendationSnapshot;
 
   // 4. Server-Side Cryptographic Integrity Hash
   const integrityHash = computeDecisionIntegrityHash({
@@ -92,15 +110,15 @@ export async function signProcurementDecision(
     officerUserId: profile.id,
     decision: payload.decision,
     remarks: payload.remarks,
-    complianceScoreSnapshot: payload.complianceScoreSnapshot,
-    riskLevelSnapshot: payload.riskLevelSnapshot,
-    aiRecommendationSnapshot: payload.aiRecommendationSnapshot,
+    complianceScoreSnapshot,
+    riskLevelSnapshot,
+    aiRecommendationSnapshot,
     signedAt,
     decisionVersion,
   });
 
   const decisionRecord: ProcurementDecisionRecord = {
-    id: `dec-${crypto.randomUUID()}`,
+    id: crypto.randomUUID(), // procurement_decisions.id is a UUID column
     decision_id: decisionId,
     tender_id: payload.tenderId,
     bid_id: payload.bidId,
@@ -113,9 +131,9 @@ export async function signProcurementDecision(
     officer_role: 'Procurement Officer',
     decision: payload.decision,
     remarks: payload.remarks.trim(),
-    compliance_score_snapshot: payload.complianceScoreSnapshot,
-    risk_level_snapshot: payload.riskLevelSnapshot,
-    ai_recommendation_snapshot: payload.aiRecommendationSnapshot,
+    compliance_score_snapshot: complianceScoreSnapshot,
+    risk_level_snapshot: riskLevelSnapshot,
+    ai_recommendation_snapshot: aiRecommendationSnapshot,
     signed_at: signedAt,
     decision_version: decisionVersion,
     status: 'SIGNED',
@@ -131,9 +149,8 @@ export async function signProcurementDecision(
     updated_at: signedAt,
   };
 
-  // 5. Database Persistence (with seamless fallback to unified compliance repository)
+  // 5. Database Persistence (with fallback to unified compliance repository)
   try {
-    const supabase = await createClient();
     const { error: dbError } = await supabase.from('procurement_decisions').insert({
       id: decisionRecord.id,
       decision_id: decisionRecord.decision_id,
@@ -170,7 +187,6 @@ export async function signProcurementDecision(
 
   // 7. Audit Trail Registration (CVC Guideline Audit Event)
   try {
-    const supabase = await createClient();
     await supabase.from('audit_events').insert({
       user_id: profile.id,
       tender_id: payload.tenderId,
