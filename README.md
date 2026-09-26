@@ -30,10 +30,11 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ### Roles
 
-A user's role comes only from `profiles.role` in the database. Users cannot change it themselves (migration `00012_security_hardening.sql`). To demo both portals, use two accounts and promote the officer account from the Supabase SQL editor:
+A user's role comes only from `profiles.role` in the database. Users cannot change it themselves (migration `00012_security_hardening.sql`). The login page's demo buttons use two accounts: `tester@tenderai.com` (Tender Authority) and `bidder@tenderai.com` (Bidder). Set a role from the Supabase SQL editor:
 
 ```sql
-update public.profiles set role = 'tender_authority' where email = 'officer@tenderai.com';
+update public.profiles set role = 'tender_authority'
+where id = (select id from auth.users where email = 'tester@tenderai.com');
 ```
 
 ### Verification sources

@@ -50,7 +50,7 @@ export function LoginForm() {
 
   // Roles are fixed per account (profiles.role), so each demo role needs its own login.
   const fillDemoAuthority = () => {
-    setEmail('officer@tenderai.com');
+    setEmail('tester@tenderai.com');
     setPassword('password123');
     setSelectedRole('tender_authority');
     setError(null);
@@ -58,7 +58,7 @@ export function LoginForm() {
   };
 
   const fillDemoBidder = () => {
-    setEmail('tester@tenderai.com');
+    setEmail('bidder@tenderai.com');
     setPassword('password123');
     setSelectedRole('bidder');
     setError(null);
