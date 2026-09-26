@@ -11,6 +11,7 @@ import type {
   GovVerificationEnvironment,
   GovernmentVerificationReport,
   GovVerificationResult,
+  GovConnectorId,
 } from './types';
 import { UdyamConnector } from './connectors/udyam';
 import { GstConnector } from './connectors/gst';
@@ -27,6 +28,26 @@ import {
 import { resolveEntity } from './matcher';
 import { calculateVerificationScore } from './risk';
 import { getCurrentTimestamp } from './connectors/base';
+
+/**
+ * Connectors backed by an authorised live government API. None are wired yet: every
+ * connector currently reads the bundled demo registry in src/data/government.
+ * Add a connector id here only once its verify() calls the real API.
+ */
+const LIVE_ADAPTERS = new Set<GovConnectorId>();
+
+function integrationNotConfigured(connectorId: GovConnectorId, source: string): GovVerificationResult {
+  return {
+    connectorId,
+    source,
+    sourceType: 'GOVERNMENT_API',
+    status: 'UNAVAILABLE',
+    identifier: 'NOT_CONFIGURED',
+    checkedAt: getCurrentTimestamp(),
+    fields: [],
+    message: 'No authorised live API integration is configured for this source. The Procurement Officer must verify this manually on the official portal.',
+  };
+}
 
 /**
  * Run government verification for a bidder across all connectors.
@@ -58,7 +79,9 @@ export function runGovernmentVerification(
   ];
 
   const verifications: GovVerificationResult[] = connectors.map(connector =>
-    connector.verify(identity, environment)
+    environment === 'PRODUCTION' && !LIVE_ADAPTERS.has(connector.id)
+      ? integrationNotConfigured(connector.id, connector.name)
+      : connector.verify(identity, environment)
   );
 
   const entityResolution = resolveEntity(identity, verifications);

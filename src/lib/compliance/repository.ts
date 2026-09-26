@@ -305,7 +305,7 @@ function initializeCanonicalScenarios() {
   );
   const scoreA = calculateProgrammaticComplianceScore(resultsA);
   const riskA = calculateDeterministicRiskLevel(resultsA);
-  const aiA = generateAIRecommendation(scoreA.score, riskA.riskLevel, riskA.riskReasons);
+  const aiA = generateAIRecommendation(scoreA.score, riskA.riskLevel, riskA.riskReasons, scoreA.mandatoryTotal);
 
   IN_MEMORY_DOSSIERS.set('bid-apex-02', {
     bidId: 'bid-apex-02',
@@ -584,7 +584,7 @@ function initializeCanonicalScenarios() {
   );
   const scoreB = calculateProgrammaticComplianceScore(resultsB, crossFindingsB);
   const riskB = calculateDeterministicRiskLevel(resultsB, crossFindingsB);
-  const aiB = generateAIRecommendation(scoreB.score, riskB.riskLevel, riskB.riskReasons);
+  const aiB = generateAIRecommendation(scoreB.score, riskB.riskLevel, riskB.riskReasons, scoreB.mandatoryTotal);
 
   IN_MEMORY_DOSSIERS.set('bid-pqr-04', {
     bidId: 'bid-pqr-04',
@@ -604,8 +604,8 @@ function initializeCanonicalScenarios() {
     bidValue: '₹15.20 Cr',
     submittedAt: '07 Sep 2026, 16:20 IST',
     status: 'NON_COMPLIANT',
-    complianceScore: scoreB.score, // 47%
-    riskLevel: 'HIGH',
+    complianceScore: scoreB.score,
+    riskLevel: riskB.riskLevel,
     riskReasons: riskB.riskReasons,
     mandatoryTotal: scoreB.mandatoryTotal,
     mandatoryPassed: scoreB.mandatoryPassed,
@@ -809,7 +809,7 @@ function initializeCanonicalScenarios() {
   );
   const scoreC = calculateProgrammaticComplianceScore(resultsC);
   const riskC = calculateDeterministicRiskLevel(resultsC);
-  const aiC = generateAIRecommendation(scoreC.score, riskC.riskLevel, riskC.riskReasons);
+  const aiC = generateAIRecommendation(scoreC.score, riskC.riskLevel, riskC.riskReasons, scoreC.mandatoryTotal);
 
   IN_MEMORY_DOSSIERS.set('bid-xyz-03', {
     bidId: 'bid-xyz-03',
@@ -829,8 +829,8 @@ function initializeCanonicalScenarios() {
     bidValue: '₹14.40 Cr',
     submittedAt: '08 Sep 2026, 11:15 IST',
     status: 'REQUIRES_ATTENTION',
-    complianceScore: scoreC.score, // 82%
-    riskLevel: 'MEDIUM',
+    complianceScore: scoreC.score,
+    riskLevel: riskC.riskLevel,
     riskReasons: riskC.riskReasons,
     mandatoryTotal: scoreC.mandatoryTotal,
     mandatoryPassed: scoreC.mandatoryPassed,
@@ -898,10 +898,15 @@ function initializeCanonicalScenarios() {
     ]
   });
 
-  // Also pre-populate ABC Industrial Solutions (96%)
+  // Also pre-populate ABC Industrial Solutions. It reuses Apex's evidence set, so its declared
+  // turnover must match that audited figure (12.40 Cr); a mismatched declaration previously produced
+  // a FAIL row under a hard-coded "96% / LOW / COMPLIANT" header.
   const resultsABC = STANDARD_CPCL_REQUIREMENTS.map((r) =>
-    evaluateRequirementDeterministic(r, bidderAEvidence[r.id], r.id === 'req-cpcl-01' ? 14.80 : undefined)
+    evaluateRequirementDeterministic(r, bidderAEvidence[r.id], r.id === 'req-cpcl-01' ? 12.40 : undefined)
   );
+  const scoreABC = calculateProgrammaticComplianceScore(resultsABC);
+  const riskABC = calculateDeterministicRiskLevel(resultsABC);
+  const aiABC = generateAIRecommendation(scoreABC.score, riskABC.riskLevel, riskABC.riskReasons, scoreABC.mandatoryTotal);
   IN_MEMORY_DOSSIERS.set('bid-abc-01', {
     bidId: 'bid-abc-01',
     submissionId: 'CL-2026-89A012B4',
@@ -920,26 +925,21 @@ function initializeCanonicalScenarios() {
     bidValue: '₹13.95 Cr',
     submittedAt: '09 Sep 2026, 14:30 IST',
     status: 'READY_FOR_REVIEW',
-    complianceScore: 96,
-    riskLevel: 'LOW',
-    riskReasons: ['All core mandatory criteria satisfied.'],
-    mandatoryTotal: 10,
-    mandatoryPassed: 10,
-    failuresCount: 0,
-    missingCount: 0,
-    warningsCount: 1,
+    complianceScore: scoreABC.score,
+    riskLevel: riskABC.riskLevel,
+    riskReasons: riskABC.riskReasons,
+    mandatoryTotal: scoreABC.mandatoryTotal,
+    mandatoryPassed: scoreABC.mandatoryPassed,
+    failuresCount: scoreABC.failedCount,
+    missingCount: scoreABC.missingCount,
+    warningsCount: scoreABC.warningCount,
     requirementResults: resultsABC,
     crossDocumentFindings: [],
     statutoryVerifications: [
       { providerId: 'gstn', providerName: 'GSTN Portal', status: 'DOCUMENT_VERIFIED', concordant: true, details: 'Active registration verified.' },
       { providerId: 'pan', providerName: 'Income Tax PAN', status: 'DOCUMENT_VERIFIED', concordant: true, details: 'Verified PAN.' },
     ],
-    aiRecommendation: {
-      recommendation: 'COMPLIANT',
-      confidence: 0.97,
-      summary: 'Vendor satisfies financial and technical qualification thresholds (96%). Recommend approval.',
-      keyRiskFactors: []
-    },
+    aiRecommendation: aiABC,
     officerDecision: undefined,
     auditEvents: [
       {
@@ -972,7 +972,7 @@ function initializeCanonicalScenarios() {
         role: 'Compliance Engine',
         action: 'Rule-by-Rule Compliance Evaluation',
         entity: 'bid-abc-01',
-        details: 'Compliance score: 96%. Risk level: LOW. 10/10 mandatory criteria passed, 1 advisory warning.'
+        details: `Compliance score: ${scoreABC.score}%. Risk level: ${riskABC.riskLevel}. ${scoreABC.mandatoryPassed}/${scoreABC.mandatoryTotal} mandatory criteria passed.`
       }
     ]
   });

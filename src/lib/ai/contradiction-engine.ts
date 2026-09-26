@@ -106,6 +106,14 @@ export interface RequirementEvidenceEvaluation {
   officerNotes?: string;
 }
 
+/** Converts an amount in lakh / crore / plain rupees to crore. Unknown units are assumed to be crore. */
+export function toCrore(amount: number, unit?: string | null): number {
+  const u = (unit || '').toLowerCase();
+  if (u.includes('lakh') || u.includes('lac')) return amount / 100;
+  if (u === 'inr' || u === 'rs' || u.includes('rupee') || amount > 100000) return amount / 10000000;
+  return amount;
+}
+
 /**
  * 1. Normalize company entity names for fuzzy comparison
  */
@@ -128,15 +136,7 @@ export function detectCrossDocumentContradictions(
   const issues: ContradictionIssue[] = [];
   let consistentCount = 0;
 
-  if (documents.length < 2) {
-    return {
-      criticalCount: 0,
-      warningCount: 0,
-      consistentCount: documents.length > 0 ? 1 : 0,
-      issues: []
-    };
-  }
-
+  // A-C compare documents against each other; D (expiry) applies even to a single document.
   // A. Company Name Consistency
   const entityDocs = documents.filter((d) => d.legalName && d.legalName.trim().length > 0);
   if (entityDocs.length >= 2) {
@@ -323,18 +323,12 @@ export function evaluateRequirementCompliance(
   bidDeadline?: string
 ): RequirementEvidenceEvaluation {
   const cat = (requirement.category || '').toLowerCase();
-  const reqName = (requirement.name || '').toLowerCase();
   const reqDesc = `${requirement.name} ${requirement.description}`.toLowerCase();
+  // Whole-word match: a plain includes('pan') also hits "company", "expansion", "Japan".
+  const mentions = (word: string) => new RegExp(`\\b${word}\\b`).test(reqDesc);
   const threshold = requirement.threshold_value;
   const clauseRef = requirement.clause_reference || `Clause Page ${requirement.source_page || 1}`;
   const expectedEvidence = requirement.evidence_required || `Valid ${requirement.name} documentation`;
-
-  // Default risk level
-  const riskLevel: ComplianceRiskLevel = requirement.risk_level
-    ? (requirement.risk_level.toUpperCase() as ComplianceRiskLevel)
-    : requirement.mandatory
-    ? 'HIGH'
-    : 'MEDIUM';
 
   // 1. FINANCIAL EVALUATION (e.g. Turnover >= ₹15 Cr, Net Worth, Solvency)
   if (
@@ -379,11 +373,40 @@ export function evaluateRequirementCompliance(
       };
     }
 
-    const detectedTurnover = finDoc.turnoverAmount;
-    // Normalize threshold (if threshold is 150000000 and turnover is 15 Cr)
-    let requiredTurnover = threshold || 15;
-    if (requiredTurnover > 100000) {
-      requiredTurnover = requiredTurnover / 10000000; // convert INR to Crores if large
+    const detectedTurnover = toCrore(finDoc.turnoverAmount, finDoc.turnoverUnit);
+    const requiredTurnover = threshold ? toCrore(threshold, requirement.threshold_unit) : null;
+
+    // Without an extracted threshold there is nothing to compare against; do not invent one.
+    if (requiredTurnover === null) {
+      return {
+        requirementId: requirement.id,
+        requirementCode: requirement.requirement_code,
+        requirementName: requirement.name,
+        clauseReference: clauseRef,
+        category: requirement.category,
+        mandatory: requirement.mandatory,
+        requiredValue: 'Threshold not extracted from tender',
+        detectedValue: `₹${detectedTurnover} Cr`,
+        evidenceRequired: expectedEvidence,
+        evidenceFound: `Audited Turnover ₹${detectedTurnover} Cr in "${finDoc.documentName}"`,
+        status: 'needs_review',
+        matrixStatus: 'REQUIRES MANUAL REVIEW',
+        riskLevel: 'MEDIUM',
+        riskReason: 'Tender threshold could not be extracted; officer must compare turnover against the clause.',
+        confidence: 0.6,
+        matchedDocumentId: finDoc.documentId,
+        matchedDocumentName: finDoc.documentName,
+        sourcePage: finDoc.pageNumber,
+        sourceExcerpt: finDoc.sourceExcerpt,
+        explanation: {
+          expected: requirement.description,
+          detected: `Detected Turnover ₹${detectedTurnover} Cr in "${finDoc.documentName}" (Page ${finDoc.pageNumber})`,
+          citation: `${clauseRef} (Page ${requirement.source_page || 1}): "${requirement.source_text || requirement.description}"`,
+          decision: 'REQUIRES MANUAL REVIEW',
+          rationale: 'No numeric threshold was extracted for this clause.'
+        },
+        recommendedAction: 'Procurement officer to verify turnover against the tender clause manually.'
+      };
     }
 
     const isPassing = detectedTurnover >= requiredTurnover;
@@ -432,19 +455,28 @@ export function evaluateRequirementCompliance(
     cat.includes('statutory') ||
     cat.includes('legal') ||
     cat.includes('registration') ||
-    reqDesc.includes('gst') ||
-    reqDesc.includes('pan') ||
-    reqDesc.includes('udyam') ||
+    mentions('gst') ||
+    mentions('gstin') ||
+    mentions('pan') ||
+    mentions('udyam') ||
     reqDesc.includes('incorporat')
   ) {
+    const wantsGst = mentions('gst') || mentions('gstin');
+    const wantsPan = mentions('pan');
+    const wantsUdyam = mentions('udyam') || mentions('msme');
+    const wantsIncorporation = reqDesc.includes('incorporat');
+    const namesSpecificCredential = wantsGst || wantsPan || wantsUdyam || wantsIncorporation;
+
     const certDoc = vaultDocs.find((d) => {
       const type = (d.documentType || '').toLowerCase();
       const name = (d.documentName || '').toLowerCase();
-      if ((reqDesc.includes('gst') || reqDesc.includes('tax')) && (type.includes('tax') || name.includes('gst') || d.gstin)) return true;
-      if (reqDesc.includes('pan') && (type.includes('tax') || name.includes('pan') || d.pan)) return true;
-      if (reqDesc.includes('udyam') && (type.includes('registration') || name.includes('udyam') || d.udyamNumber)) return true;
-      if (reqDesc.includes('incorporat') && (type.includes('registration') || name.includes('incorporation'))) return true;
-      return type.includes('legal') || type.includes('registration');
+      if (wantsGst && (name.includes('gst') || d.gstin)) return true;
+      if (wantsPan && (/\bpan\b/.test(name) || d.pan)) return true;
+      if (wantsUdyam && (name.includes('udyam') || d.udyamNumber)) return true;
+      if (wantsIncorporation && name.includes('incorporation')) return true;
+      // Only fall back to "any registration document" when the clause does not name a specific credential;
+      // otherwise a Udyam certificate would satisfy a GST requirement.
+      return !namesSpecificCredential && (type.includes('legal') || type.includes('registration'));
     });
 
     if (!certDoc) {
@@ -477,6 +509,40 @@ export function evaluateRequirementCompliance(
     }
 
     const detectedIdentifier = certDoc.gstin || certDoc.pan || certDoc.udyamNumber || certDoc.documentName;
+    const statutoryRefDate = bidDeadline ? new Date(bidDeadline) : new Date();
+    const statutoryExpiry = certDoc.expiryDate ? new Date(certDoc.expiryDate) : null;
+    if (statutoryExpiry && !isNaN(statutoryExpiry.getTime()) && statutoryExpiry.getTime() < statutoryRefDate.getTime()) {
+      return {
+        requirementId: requirement.id,
+        requirementCode: requirement.requirement_code,
+        requirementName: requirement.name,
+        clauseReference: clauseRef,
+        category: requirement.category,
+        mandatory: requirement.mandatory,
+        requiredValue: requirement.name,
+        detectedValue: detectedIdentifier,
+        evidenceRequired: expectedEvidence,
+        evidenceFound: `${detectedIdentifier} in "${certDoc.documentName}" expired on ${certDoc.expiryDate}`,
+        status: 'non_compliant',
+        matrixStatus: 'NON-COMPLIANT',
+        riskLevel: 'HIGH',
+        riskReason: 'Statutory registration expired before the bid submission date.',
+        confidence: 0.96,
+        matchedDocumentId: certDoc.documentId,
+        matchedDocumentName: certDoc.documentName,
+        sourcePage: certDoc.pageNumber,
+        sourceExcerpt: certDoc.sourceExcerpt,
+        isDateValidAtBidDate: false,
+        explanation: {
+          expected: `Valid ${requirement.name}`,
+          detected: `"${certDoc.documentName}" expired on ${certDoc.expiryDate}`,
+          citation: `${clauseRef} (Page ${requirement.source_page || 1}): "${requirement.source_text || requirement.description}"`,
+          decision: 'NON-COMPLIANT',
+          rationale: `Registration expired prior to the submission date (${statutoryRefDate.toISOString().split('T')[0]}).`
+        },
+        recommendedAction: 'Request renewed registration certificate from bidder.'
+      };
+    }
 
     return {
       requirementId: requirement.id,
@@ -514,7 +580,7 @@ export function evaluateRequirementCompliance(
     const certDoc = vaultDocs.find((d) => {
       const type = (d.documentType || '').toLowerCase();
       const name = (d.documentName || '').toLowerCase();
-      return type.includes('quality') || name.includes('iso') || name.includes('certificate') || type.includes('certif');
+      return type.includes('quality') || name.includes('iso') || name.includes('cmmi') || type.includes('certif');
     });
 
     if (!certDoc) {
@@ -643,7 +709,11 @@ export function evaluateRequirementCompliance(
       };
     }
 
-    const detectedExp = expDoc.projectValue ? `₹${expDoc.projectValue} Cr project` : `${expDoc.experienceYears || 5} Years`;
+    const detectedExp = expDoc.projectValue
+      ? `₹${expDoc.projectValue} Cr project`
+      : expDoc.experienceYears
+      ? `${expDoc.experienceYears} Years`
+      : 'value not extracted';
     const isPassing = !threshold || (expDoc.projectValue && expDoc.projectValue >= threshold);
     const status = isPassing ? 'compliant' : 'partially_compliant';
     const matrixStatus: ComplianceMatrixStatus = isPassing ? 'COMPLIANT' : 'PARTIALLY COMPLIANT';
@@ -746,8 +816,9 @@ export function calculateTransparentComplianceScore(evaluations: RequirementEvid
 } {
   const totalRequirements = evaluations.length;
   if (totalRequirements === 0) {
+    // Nothing extracted means nothing was verified; a 100% score here would read as "fully compliant".
     return {
-      score: 100,
+      score: 0,
       totalRequirements: 0,
       compliantCount: 0,
       partiallyCompliantCount: 0,
@@ -755,7 +826,7 @@ export function calculateTransparentComplianceScore(evaluations: RequirementEvid
       missingCount: 0,
       manualReviewCount: 0,
       notVerifiedCount: 0,
-      formulaDescription: 'Score = 100% (No requirements extracted)',
+      formulaDescription: 'Score = 0% (No requirements extracted — manual review required)',
       pointsEarned: 0,
       maxPoints: 0
     };

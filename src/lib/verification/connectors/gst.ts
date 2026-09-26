@@ -43,6 +43,18 @@ function extractPanFromGstin(gstin: string): string {
   return '';
 }
 
+/** Maximum months a return period may lag before filing is treated as lapsed. */
+const MAX_RETURN_LAG_MONTHS = 3;
+
+/** Parses "August 2026" style periods and checks the lag against today. */
+function isReturnFilingCurrent(lastReturnFiled: string | undefined, now: Date = new Date()): boolean {
+  if (!lastReturnFiled) return false;
+  const period = new Date(`1 ${lastReturnFiled}`);
+  if (isNaN(period.getTime())) return false;
+  const lagMonths = (now.getFullYear() - period.getFullYear()) * 12 + (now.getMonth() - period.getMonth());
+  return lagMonths <= MAX_RETURN_LAG_MONTHS;
+}
+
 export class GstConnector implements IGovVerificationConnector {
   id: GovConnectorId = 'gst';
   name = 'GST Network (GSTN)';
@@ -152,6 +164,17 @@ export class GstConnector implements IGovVerificationConnector {
         confidence: panMatch ? 1.0 : 0,
       });
     }
+
+    // Return filing: a registration can be ACTIVE while returns have lapsed.
+    const returnFilingCurrent = isReturnFilingCurrent(govRecord.lastReturnFiled);
+    fields.push({
+      field: 'lastReturnFiled',
+      fieldLabel: 'GST Return Filing (GSTR-3B)',
+      documentValue: 'Regular filer',
+      governmentValue: govRecord.lastReturnFiled || 'No returns on record',
+      match: returnFilingCurrent,
+      confidence: 1.0,
+    });
 
     const evidence: GovVerificationEvidence[] = [
       { label: 'State', value: govRecord.state },

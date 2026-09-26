@@ -141,13 +141,32 @@ export function calculateVerificationScore(
     total -= 5; // minor penalty for variations like "Pvt Ltd" vs "Private Limited"
   }
 
+  // A GSTIN whose embedded PAN differs from the submitted PAN means two different tax entities.
+  const gstinPanConflict = entityResolution.conflicts.some((c) => c.field === 'gstin-pan');
+  if (gstinPanConflict) {
+    total -= 25;
+  }
+
+  // Registry-level disqualifiers. These are not field matches, so they were previously
+  // invisible to the score: a debarred bidder or a cancelled GST registration could rate LOW.
+  const isDebarred = verifications.some((v) => v.connectorId === 'blacklisting' && v.status === 'INACTIVE');
+  const inactiveRegistrations = verifications.filter(
+    (v) => v.connectorId !== 'blacklisting' && (v.status === 'INACTIVE' || v.status === 'EXPIRED')
+  );
+  total -= 20 * inactiveRegistrations.length;
+
   // Clamp to 0-100
   total = Math.max(0, Math.min(100, total));
+  if (isDebarred) {
+    total = Math.min(total, 20);
+  }
 
   // Determine risk level
   let riskLevel: GovernmentVerificationScore['riskLevel'];
-  if (total < 40 || entityResolution.panConsistency === 'CONFLICT') {
+  if (total < 40 || entityResolution.panConsistency === 'CONFLICT' || gstinPanConflict || isDebarred) {
     riskLevel = 'CRITICAL';
+  } else if (inactiveRegistrations.length > 0) {
+    riskLevel = 'HIGH';
   } else if (total < 60) {
     riskLevel = 'HIGH';
   } else if (total < 80) {

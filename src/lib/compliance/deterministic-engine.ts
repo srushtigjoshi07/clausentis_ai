@@ -89,7 +89,7 @@ export function evaluateRequirementDeterministic(
         reason: pass && !declMismatch
           ? `Verified ${actualNum} ${req.thresholdUnit || ''} satisfies the minimum requirement of ${minRequired} ${req.thresholdUnit || ''}.`
           : declMismatch
-          ? `Declared value (${declaredValue}) contradicts verified evidence (${actualNum} ${req.thresholdUnit || ''}). Turnover verified below minimum threshold.`
+          ? `Declared value (${declaredValue}) contradicts verified evidence (${actualNum} ${req.thresholdUnit || ''}).${pass ? '' : ' Verified value is below the minimum threshold.'}`
           : `Verified value ${actualNum} is below minimum threshold of ${minRequired} (Deficit: ${delta} ${req.thresholdUnit || ''}).`,
         discrepancyDelta,
         evidence,
@@ -165,7 +165,15 @@ export function evaluateRequirementDeterministic(
 
     case 'DATE_VALIDITY': {
       const docExpiry = String(evidence.extractedValue);
-      const isDateValid = new Date(docExpiry).getTime() >= new Date(bidClosingDate).getTime();
+      const expiryTime = new Date(docExpiry).getTime();
+      const isParsable = !isNaN(expiryTime);
+      const isDateValid = isParsable && expiryTime >= new Date(bidClosingDate).getTime();
+      // An expired mandatory document is a failure, not an advisory; an unreadable date needs review.
+      const status: RequirementComplianceResult['status'] = isDateValid
+        ? 'PASS'
+        : isParsable && req.mandatory
+        ? 'FAIL'
+        : 'WARNING';
       return {
         requirementId: req.id,
         clauseCode: req.clauseCode,
@@ -173,37 +181,17 @@ export function evaluateRequirementDeterministic(
         category: req.category,
         ruleType: req.ruleType,
         mandatory: req.mandatory,
-        status: isDateValid ? 'PASS' : 'WARNING',
+        status,
         expectedValue: `Valid through tender closing (${bidClosingDate})`,
         declaredValue: declaredValue ? String(declaredValue) : undefined,
         verifiedValue: `Expires: ${docExpiry}`,
         reason: isDateValid
           ? `Document is valid through ${docExpiry}, exceeding tender closing date.`
-          : `Document expired or expires on ${docExpiry}, prior to commissioning schedule.`,
+          : isParsable
+          ? `Document expires on ${docExpiry}, before the tender closing date (${bidClosingDate}).`
+          : `Expiry date "${docExpiry}" could not be read; manual verification required.`,
         evidence,
-        riskFactor: isDateValid ? 'LOW' : 'MEDIUM'
-      };
-    }
-
-    case 'PERCENTAGE_THRESHOLD': {
-      const minPercent = req.thresholdValue ?? 50.0;
-      const pass = !isNaN(actualNum) && actualNum >= minPercent;
-      return {
-        requirementId: req.id,
-        clauseCode: req.clauseCode,
-        title: req.title,
-        category: req.category,
-        ruleType: req.ruleType,
-        mandatory: req.mandatory,
-        status: pass ? 'PASS' : 'FAIL',
-        expectedValue: `≥ ${minPercent}% Local Content`,
-        declaredValue: declaredValue ? `${declaredValue}%` : undefined,
-        verifiedValue: `${actualNum}%`,
-        reason: pass
-          ? `Declared local content of ${actualNum}% satisfies the required minimum of ${minPercent}%.`
-          : `Local content of ${actualNum}% is below the mandatory minimum threshold of ${minPercent}%.`,
-        evidence,
-        riskFactor: pass ? 'LOW' : 'HIGH'
+        riskFactor: status === 'FAIL' ? 'HIGH' : isDateValid ? 'LOW' : 'MEDIUM'
       };
     }
 
@@ -260,7 +248,8 @@ export function calculateProgrammaticComplianceScore(
   const missingCount = results.filter((r) => r.status === 'MISSING').length;
   const warningCount = results.filter((r) => r.status === 'WARNING').length;
 
-  let score = 100;
+  // No evaluated requirements means nothing was verified.
+  let score = results.length === 0 ? 0 : 100;
   if (mandatory.length > 0) {
     const mandatoryPart = (passedMandatory / mandatory.length) * 80;
     const optionalPart = optional.length > 0 ? (passedOptional / optional.length) * 20 : 20;
@@ -328,7 +317,7 @@ export function calculateDeterministicRiskLevel(
   }
 
   if (mandatoryFailures.length >= 2 || (mandatoryFailures.length >= 1 && criticalFindings.length >= 1)) {
-    return { riskLevel: 'HIGH', riskReasons: reasons };
+    return { riskLevel: 'CRITICAL', riskReasons: reasons };
   }
 
   if (mandatoryFailures.length === 1 || missingMandatory.length >= 1 || criticalFindings.length >= 1) {
@@ -348,7 +337,8 @@ export function calculateDeterministicRiskLevel(
 export function generateAIRecommendation(
   score: number,
   riskLevel: RiskLevel,
-  riskReasons: string[]
+  riskReasons: string[],
+  mandatoryTotal?: number
 ): {
   recommendation: AIRecommendationType;
   confidence: number;
@@ -376,7 +366,7 @@ export function generateAIRecommendation(
   return {
     recommendation: 'COMPLIANT',
     confidence: 0.99,
-    summary: `The proposal demonstrates complete documentary, statutory, and financial compliance (${score}%). All 10 mandatory clauses verified against source evidence.`,
+    summary: `The proposal demonstrates complete documentary, statutory, and financial compliance (${score}%). ${mandatoryTotal !== undefined ? `All ${mandatoryTotal} mandatory clauses` : 'All mandatory clauses'} verified against source evidence.`,
     keyRiskFactors: []
   };
 }

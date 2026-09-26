@@ -256,10 +256,10 @@ export function GovernmentVerificationDashboard() {
           </div>
           <span className={`inline-flex items-center px-2.5 py-1 rounded text-[10px] font-mono uppercase tracking-wider font-semibold border ${
             environment === 'PRODUCTION'
-              ? 'bg-[#ECFDF5] text-[#065F46] border-[#A7F3D0]'
+              ? 'bg-[#F5F5F5] text-[#555555] border-[#E5E5E5]'
               : 'bg-[#FFFBEB] text-[#92400E] border-[#FDE68A]'
           }`}>
-            {environment === 'PRODUCTION' ? '🟢 LIVE CONNECTORS' : '🟡 SANDBOX ACTIVE'}
+            {environment === 'PRODUCTION' ? 'LIVE MODE · NO APIS CONFIGURED' : '🟡 SANDBOX ACTIVE'}
           </span>
         </div>
       </header>

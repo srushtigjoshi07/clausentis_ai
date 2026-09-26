@@ -309,14 +309,15 @@ export class NsicConnector implements IGovVerificationConnector {
     const checkedAt = getCurrentTimestamp();
     const sourceType = resolveSourceType(environment);
 
-    const hasUdyam = Boolean(identity.udyamNumber);
+    // NSIC SPRS is a separate enlistment; a Udyam number alone does not prove it.
+    const hasNsic = Boolean(identity.nsicNumber);
 
     const fields: GovFieldComparison[] = [
       {
         field: 'nsic_registration',
         fieldLabel: 'NSIC SPRS Enlistment Status',
-        documentValue: hasUdyam ? 'SPRS Active Enlistment' : 'Not Claimed',
-        governmentValue: hasUdyam ? 'ENLISTED (Eligible for Free Tender Sets & EMD Waiver)' : 'NOT_ENLISTED',
+        documentValue: hasNsic ? `SPRS ${identity.nsicNumber}` : 'Not Claimed',
+        governmentValue: hasNsic ? 'ENLISTED (Eligible for Free Tender Sets & EMD Waiver)' : 'NOT_ENLISTED',
         match: true,
         confidence: 0.95,
       },
@@ -334,17 +335,17 @@ export class NsicConnector implements IGovVerificationConnector {
       connectorId: this.id,
       source: this.name,
       sourceType,
-      status: hasUdyam ? 'VERIFIED' : 'UNAVAILABLE',
-      identifier: identity.pan ? `NSIC-${identity.pan}` : 'NOT_PROVIDED',
+      status: hasNsic ? 'VERIFIED' : 'UNAVAILABLE',
+      identifier: identity.nsicNumber || 'NOT_PROVIDED',
       checkedAt,
       fields,
       evidence: [
         { label: 'Scheme Mandate', value: 'Single Point Registration Scheme for Micro & Small Enterprises' },
         { label: 'Statutory Privilege', value: 'Issue of tender sets free of cost + Exemption from EMD payment' }
       ],
-      message: hasUdyam
+      message: hasNsic
         ? 'NSIC Single Point Registration confirmed active. Eligible for tender set and EMD statutory privileges.'
-        : 'No active NSIC registration claimed.',
+        : 'No NSIC registration number was supplied. Udyam registration alone does not confer NSIC SPRS privileges.',
     };
   }
 }

@@ -78,6 +78,7 @@ export interface BidderExtractedIdentity {
   gstin?: string;
   cin?: string;
   udyamNumber?: string;
+  nsicNumber?: string;
   registeredAddress?: string;
   status?: string;
   organisationType?: string;
