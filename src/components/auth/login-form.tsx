@@ -22,12 +22,26 @@ export function LoginForm() {
     setDetails(null);
     formData.set('role', selectedRole);
 
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const hasAnonKey = Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    let hostname = 'unknown';
+    try {
+      if (supabaseUrl) {
+        hostname = new URL(supabaseUrl).hostname;
+      }
+    } catch {}
+
+    console.log(`AUTH DEBUG\n-----------\nSupabase URL configured: ${supabaseUrl ? 'YES' : 'NO'}\nAnon key configured: ${hasAnonKey ? 'YES' : 'NO'}\nSupabase hostname: ${hostname}\nCurrent origin: ${typeof window !== 'undefined' ? window.location.origin : 'server'}\nAuth request started: YES`);
+
     const result = (await login(formData)) as AuthActionResult | void;
 
     if (result && 'error' in result && result.error) {
+      console.log(`Auth request completed: NO\nError name: ${result.errorCode || 'Error'}\nError message: ${result.error}\nError status: ${result.errorCode || 'N/A'}\nError code: ${result.errorCode || 'N/A'}`);
       setError(result.error);
       setDetails(result.details || null);
       setIsLoading(false);
+    } else {
+      console.log('Auth request completed: YES');
     }
   }
 
