@@ -74,12 +74,13 @@ export function runBidComplianceEvaluation(
       if (type === 'audited_financials' && (name.includes('financial') || name.includes('turnover') || name.includes('balance_sheet'))) return true;
       if (type === 'experience_certificate' && (name.includes('experience') || name.includes('completion') || name.includes('past_performance') || name.includes('work_order'))) return true;
       if (type === 'gst_certificate' && (name.includes('gst') || name.includes('reg06') || name.includes('reg-06'))) return true;
-      if (type === 'pan_card' && name.includes('pan') && !name.includes('company_profile')) return true;
+      if (type === 'pan_card' && /(^|[^a-z])pan([^a-z]|$)/.test(name)) return true;
       if (type === 'non_blacklisting_declaration' && (name.includes('blacklisting') || name.includes('debarment') || name.includes('annexure_b') || name.includes('affidavit'))) return true;
       if (type === 'local_content_declaration' && (name.includes('local_content') || name.includes('make_in_india'))) return true;
       if (type === 'technical_compliance' && (name.includes('technical_compliance') || name.includes('datasheet') || name.includes('deviation'))) return true;
       if (type === 'emd_proof' && (name.includes('emd') || name.includes('bank_guarantee') || name.includes('security'))) return true;
       if (type === 'udyam_certificate' && (name.includes('udyam') || name.includes('msme'))) return true;
+      if (type === 'oem_authorization' && (name.includes('oem') || name.includes('manufacturer_authori'))) return true;
       return false;
     });
   };
@@ -93,6 +94,7 @@ export function runBidComplianceEvaluation(
   const techDoc = getDoc('technical_compliance');
   const emdDoc = getDoc('emd_proof');
   const udyamDoc = getDoc('udyam_certificate');
+  const oemDoc = getDoc('oem_authorization');
 
   // ─────────────────────────────────────────────────────────────
   // 1. FINANCIAL REQUIREMENTS
@@ -404,6 +406,84 @@ export function runBidComplianceEvaluation(
       remediationAction: 'Complete and upload the Annexure-C Technical Datasheet Compliance statement.',
       isMandatory: false,
     });
+  }
+
+  // Check 2D: OEM Manufacturer Authorization (equipment supply tenders)
+  if (tender.category === 'Goods') {
+    const oemCriteria = 'Manufacturer Authorization Form issued by the Original Equipment Manufacturer naming the bidder, with 10-year spares backing.';
+    const oemBase = {
+      id: 'req-tech-04',
+      requirementTitle: 'OEM Manufacturer Authorization',
+      category: 'Technical' as const,
+      tenderClauseReference: 'Technical Qualification • OEM Authorization',
+      requiredCriteria: oemCriteria,
+      isMandatory: true,
+    };
+    if (!oemDoc) {
+      matrix.push({
+        ...oemBase,
+        bidderEvidence: 'OEM authorization not provided.',
+        status: 'MISSING',
+        confidence: 99,
+        riskLevel: 'HIGH',
+        sourceDocument: '—',
+        failureReason: 'Mandatory OEM authorization missing.',
+        remediationAction: 'Upload the Manufacturer Authorization Form issued by the OEM.',
+      });
+    } else {
+      const oemFacts = oemDoc.extractedFacts as
+        | { isDirectOem?: boolean; oemLegalStatus?: string; authorizedEntity?: string; sparesYears?: number }
+        | undefined;
+      const problems: string[] = [];
+      if (oemFacts?.isDirectOem === false) {
+        problems.push(`issuer is not the OEM (${oemFacts.oemLegalStatus || 'reseller'})`);
+      }
+      if (oemFacts?.authorizedEntity) {
+        const norm = (v: string) => v.toLowerCase().replace(/private/g, 'pvt').replace(/limited/g, 'ltd').replace(/[^a-z0-9]/g, '');
+        if (norm(oemFacts.authorizedEntity) !== norm(bidderProfile.companyName)) {
+          problems.push(`authorizes "${oemFacts.authorizedEntity}", not the bidder`);
+        }
+      }
+      if (typeof oemFacts?.sparesYears === 'number' && oemFacts.sparesYears < 10) {
+        problems.push(`spares commitment is ${oemFacts.sparesYears} years (10 required)`);
+      }
+
+      if (problems.length > 0) {
+        matrix.push({
+          ...oemBase,
+          bidderEvidence: `OEM authorization "${oemDoc.fileName}": ${problems.join('; ')}.`,
+          status: 'FAIL',
+          confidence: 92,
+          riskLevel: 'HIGH',
+          sourceDocument: oemDoc.fileName,
+          sourcePage: 1,
+          failureReason: problems.join('; '),
+          remediationAction: 'Obtain a Manufacturer Authorization Form directly from the OEM naming the bidder.',
+        });
+        criticalFindings.push({
+          id: 'crit-oem-authorization',
+          title: 'OEM Authorization Not Valid',
+          required: 'Direct OEM authorization naming the bidder',
+          evidence: problems.join('; '),
+          source: oemDoc.fileName,
+          page: 1,
+          status: 'FAIL',
+          remediation: 'Submit a direct OEM Manufacturer Authorization Form.',
+        });
+      } else if (oemFacts?.isDirectOem === true) {
+        matrix.push({
+          ...oemBase,
+          bidderEvidence: `Direct OEM authorization in "${oemDoc.fileName}"${oemFacts.sparesYears ? ` with ${oemFacts.sparesYears}-year spares commitment` : ''}.`,
+          status: 'PASS',
+          confidence: 94,
+          riskLevel: 'LOW',
+          sourceDocument: oemDoc.fileName,
+          sourcePage: 1,
+        });
+      } else {
+        matrix.push(unextractedRow(oemBase.id, oemBase.requirementTitle, 'Technical', oemBase.tenderClauseReference, oemCriteria, oemDoc.fileName, 'Manufacturer status'));
+      }
+    }
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -1100,6 +1180,20 @@ export function getDemoFlawedDocuments(): BidUploadedDocument[] {
       extractedFacts: { isCompliant: true, deviationsCount: 0 },
     },
     {
+      id: 'doc-oem-01',
+      fileName: 'Apex_OEM_Manufacturer_Authorization.pdf',
+      documentType: 'oem_authorization',
+      displayName: 'OEM Manufacturer Authorization (MAF)',
+      fileSizeBytes: 640000,
+      status: 'processed',
+      uploadedAt: new Date().toISOString(),
+      extractedFacts: {
+        isDirectOem: true,
+        authorizedEntity: 'Apex Heavy Engineering Pvt Ltd',
+        sparesYears: 10,
+      },
+    },
+    {
       id: 'doc-emd-01',
       fileName: 'Apex_Udyam_MSME_Exemption_Proof.pdf',
       documentType: 'emd_proof',
@@ -1194,6 +1288,20 @@ export function getDemoPassingDocuments(): BidUploadedDocument[] {
       status: 'processed',
       uploadedAt: new Date().toISOString(),
       extractedFacts: { isCompliant: true, deviationsCount: 0 },
+    },
+    {
+      id: 'doc-oem-01',
+      fileName: 'Apex_OEM_Manufacturer_Authorization.pdf',
+      documentType: 'oem_authorization',
+      displayName: 'OEM Manufacturer Authorization (MAF)',
+      fileSizeBytes: 640000,
+      status: 'processed',
+      uploadedAt: new Date().toISOString(),
+      extractedFacts: {
+        isDirectOem: true,
+        authorizedEntity: 'Apex Heavy Engineering Pvt Ltd',
+        sparesYears: 10,
+      },
     },
     {
       id: 'doc-emd-01',

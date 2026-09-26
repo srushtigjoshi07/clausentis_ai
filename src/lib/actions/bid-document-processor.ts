@@ -33,6 +33,7 @@ const DOCUMENT_TAG_LABELS: Record<BidUploadedDocument['documentType'], string> =
   technical_compliance: 'Technical Datasheet & Deviation Statement',
   emd_proof: 'EMD Bank Receipt or Udyam Exemption Certificate',
   udyam_certificate: 'Udyam / MSME Registration',
+  oem_authorization: 'OEM Manufacturer Authorization (MAF)',
   other: 'Other Supplementary Credential',
 };
 
@@ -57,7 +58,8 @@ function inferDocumentType(
   if (nameLower.includes('gst') || nameLower.includes('reg06') || nameLower.includes('reg-06')) {
     return 'gst_certificate';
   }
-  if (nameLower.includes('pan') && !nameLower.includes('company_profile')) {
+  // Whole-token match so names like "Company_Profile" or "Expansion_Plan" are not read as PAN cards.
+  if (/(^|[^a-z])pan([^a-z]|$)/.test(nameLower)) {
     return 'pan_card';
   }
   if (nameLower.includes('debarment') || nameLower.includes('blacklisting') || nameLower.includes('annexure_b') || nameLower.includes('affidavit')) {
@@ -74,6 +76,9 @@ function inferDocumentType(
   }
   if (nameLower.includes('udyam') || nameLower.includes('msme')) {
     return 'udyam_certificate';
+  }
+  if (nameLower.includes('oem') || nameLower.includes('manufacturer_authori') || nameLower.includes('maf')) {
+    return 'oem_authorization';
   }
 
   // 2. Check fullText content patterns
@@ -99,6 +104,9 @@ function inferDocumentType(
   }
   if (textLower.includes('local content') || textLower.includes('make in india') || textLower.includes('class-i local supplier') || textLower.includes('domestic value addition')) {
     return 'local_content_declaration';
+  }
+  if (textLower.includes('manufacturer authorization form') || textLower.includes('manufacturer authorisation form')) {
+    return 'oem_authorization';
   }
   if (textLower.includes('schedule of deviations') || textLower.includes('technical specification compliance') || textLower.includes('datasheet conformance')) {
     return 'technical_compliance';
@@ -275,6 +283,27 @@ export async function processBidderDocumentAction(
           extractedFacts.isCompliant = true;
         }
       }
+    }
+
+    // 5b. OEM Manufacturer Authorization
+    if (docType === 'oem_authorization') {
+      const legalStatus = fullText.match(/Manufacturer\s+Legal\s+Status\s*[:\-]?\s*([^\n\r]+)/i)?.[1]?.trim();
+      const statusLower = (legalStatus || '').toLowerCase();
+      if (/not\s+an\s+original\s+equipment\s+manufacturer|reseller|stockist|trading|dealer/.test(statusLower)) {
+        extractedFacts.isDirectOem = false;
+      } else if (/direct\s+oem|original\s+equipment\s+manufacturer/.test(statusLower)) {
+        extractedFacts.isDirectOem = true;
+      }
+      if (legalStatus) extractedFacts.oemLegalStatus = legalStatus;
+
+      const authorizedEntity = fullText.match(/Authori[sz]ed\s+Bidding\s+Entity\s*[:\-]?\s*([^\n\r]+)/i)?.[1]?.trim();
+      if (authorizedEntity) extractedFacts.authorizedEntity = authorizedEntity;
+
+      const sparesMatch = fullText.match(/(\d+)[-\s]*Years?\s+(?:Genuine\s+)?Spare/i);
+      if (sparesMatch) extractedFacts.sparesYears = parseInt(sparesMatch[1], 10);
+
+      const tenderRefMatch = fullText.match(/Tender\s+Ref(?:erence)?\s*[:\-]?\s*([A-Z0-9/\-]+)/i);
+      if (tenderRefMatch) extractedFacts.oemTenderReference = tenderRefMatch[1];
     }
 
     // 6. GSTIN & PAN

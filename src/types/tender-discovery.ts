@@ -128,6 +128,7 @@ export interface BidUploadedDocument {
     | 'technical_compliance'
     | 'emd_proof'
     | 'udyam_certificate'
+    | 'oem_authorization'
     | 'other';
   displayName: string;
   fileSizeBytes: number;

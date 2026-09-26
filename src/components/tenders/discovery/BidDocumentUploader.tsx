@@ -48,6 +48,7 @@ const DOCUMENT_TYPE_OPTIONS: { id: BidUploadedDocument['documentType']; label: s
   { id: 'technical_compliance', label: 'Technical Datasheet & Deviation Statement' },
   { id: 'emd_proof', label: 'EMD Bank Receipt or Udyam Exemption Certificate' },
   { id: 'udyam_certificate', label: 'Udyam / MSME Registration' },
+  { id: 'oem_authorization', label: 'OEM Manufacturer Authorization (MAF)' },
   { id: 'other', label: 'Other Supplementary Credential' },
 ];
 

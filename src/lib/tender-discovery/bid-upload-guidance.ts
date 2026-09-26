@@ -167,6 +167,21 @@ export function getBidUploadGuidance(
         ],
       };
 
+    case 'oem_authorization':
+      return {
+        documentType: 'oem_authorization',
+        title: 'OEM Manufacturer Authorization (MAF)',
+        clauseRef: 'Technical Qualification • OEM Authorization',
+        purpose: 'Proof that the original equipment manufacturer authorizes the bidder to quote its equipment for this tender.',
+        whatToSubmit: 'Submit the Manufacturer Authorization Form issued on the OEM letterhead, naming the bidder and this tender reference.',
+        expectedEvidence: [
+          'Issued by the Original Equipment Manufacturer (not a reseller or stockist)',
+          'Bidder legal name as the authorized bidding entity',
+          'Tender reference number',
+          'Spare parts and warranty backing commitment',
+        ],
+      };
+
     case 'udyam_certificate':
       return {
         documentType: 'udyam_certificate',
