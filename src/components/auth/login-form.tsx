@@ -22,21 +22,85 @@ export function LoginForm() {
     setDetails(null);
     formData.set('role', selectedRole);
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const hasAnonKey = Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+    const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/^["']|["']$/g, '');
+    const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim().replace(/^["']|["']$/g, '');
+
+    // Step 2 Validation: Check configuration presence and structure
+    if (
+      !rawUrl ||
+      !rawKey ||
+      rawUrl === 'your_supabase_project_url' ||
+      rawKey === 'your_supabase_anon_key' ||
+      !rawUrl.startsWith('https://') ||
+      !rawUrl.includes('.supabase.co')
+    ) {
+      setError('Supabase configuration is missing from this deployment.');
+      setDetails('Please configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+      setIsLoading(false);
+      return;
+    }
+
+    const cleanUrl = rawUrl.replace(/\/+$/, '');
     let hostname = 'unknown';
     try {
-      if (supabaseUrl) {
-        hostname = new URL(supabaseUrl).hostname;
-      }
+      hostname = new URL(cleanUrl).hostname;
     } catch {}
 
-    console.log(`AUTH DEBUG\n-----------\nSupabase URL configured: ${supabaseUrl ? 'YES' : 'NO'}\nAnon key configured: ${hasAnonKey ? 'YES' : 'NO'}\nSupabase hostname: ${hostname}\nCurrent origin: ${typeof window !== 'undefined' ? window.location.origin : 'server'}\nAuth request started: YES`);
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'server';
 
+    console.log(`AUTH HEALTH CHECK (DIAGNOSTIC)
+----------------------------------
+Supabase URL configured: YES
+Anon key configured: YES
+Supabase hostname: ${hostname}
+Current website origin: ${origin}
+Auth request started: YES`);
+
+    // Step 1: Direct fetch against /auth/v1/settings
+    try {
+      const settingsRes = await fetch(`${cleanUrl}/auth/v1/settings`, {
+        method: 'GET',
+        headers: {
+          apikey: rawKey,
+        },
+      });
+
+      console.log(`Supabase Auth settings endpoint: ${settingsRes.ok ? 'REACHABLE' : 'FAILED'} (HTTP ${settingsRes.status} ${settingsRes.statusText})`);
+
+      // Step 3: Direct token endpoint test if reachable
+      if (settingsRes.ok) {
+        try {
+          const emailVal = (formData.get('email') as string) || '';
+          const passVal = (formData.get('password') as string) || '';
+          const tokenRes = await fetch(`${cleanUrl}/auth/v1/token?grant_type=password`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              apikey: rawKey,
+            },
+            body: JSON.stringify({
+              email: emailVal,
+              password: passVal,
+            }),
+          });
+          console.log(`Direct token endpoint: HTTP ${tokenRes.status} ${tokenRes.statusText}`);
+        } catch (tokenErr: any) {
+          console.log(`Direct token endpoint fetch error: ${tokenErr?.name || 'Error'} - ${tokenErr?.message}`);
+        }
+      }
+    } catch (netErr: any) {
+      console.log(`Supabase Auth settings endpoint: FAILED
+Error name: ${netErr?.name || 'FetchError'}
+Error message: ${netErr?.message}
+Hostname: ${hostname}
+Origin: ${origin}`);
+    }
+
+    // Call standard login action
     const result = (await login(formData)) as AuthActionResult | void;
 
     if (result && 'error' in result && result.error) {
-      console.log(`Auth request completed: NO\nError name: ${result.errorCode || 'Error'}\nError message: ${result.error}\nError status: ${result.errorCode || 'N/A'}\nError code: ${result.errorCode || 'N/A'}`);
+      console.log(`Auth request completed: NO\nError code: ${result.errorCode || 'UNKNOWN'}\nError message: ${result.error}`);
       setError(result.error);
       setDetails(result.details || null);
       setIsLoading(false);
