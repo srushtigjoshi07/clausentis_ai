@@ -295,47 +295,51 @@ export async function signup(formData: FormData): Promise<AuthActionResult | voi
 }
 
 export async function getUserProfile(): Promise<UserProfile | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
   try {
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, full_name, company_name, role, created_at, updated_at')
-      .eq('id', user.id)
-      .maybeSingle();
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (data) {
-      const resolvedRole: UserRole = data.role === 'tender_authority' ? 'tender_authority' : 'bidder';
-      return {
-        id: data.id,
-        email: user.email || '',
-        fullName: data.full_name || user.user_metadata?.full_name || 'Procurement Specialist',
-        role: resolvedRole,
-        organisationName: data.company_name || user.user_metadata?.organisation_name ||
-          (resolvedRole === 'tender_authority' ? 'Chennai Petroleum Corporation Limited' : 'Apex Heavy Engineering Pvt Ltd'),
-        createdAt: data.created_at || user.created_at,
-        updatedAt: data.updated_at || user.updated_at || data.created_at,
-      };
+    if (!user) return null;
+
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, full_name, company_name, role, created_at, updated_at')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (data) {
+        const resolvedRole: UserRole = data.role === 'tender_authority' ? 'tender_authority' : 'bidder';
+        return {
+          id: data.id,
+          email: user.email || '',
+          fullName: data.full_name || user.user_metadata?.full_name || 'Procurement Specialist',
+          role: resolvedRole,
+          organisationName: data.company_name || user.user_metadata?.organisation_name ||
+            (resolvedRole === 'tender_authority' ? 'Chennai Petroleum Corporation Limited' : 'Apex Heavy Engineering Pvt Ltd'),
+          createdAt: data.created_at || user.created_at,
+          updatedAt: data.updated_at || user.updated_at || data.created_at,
+        };
+      }
+    } catch (err) {
+      console.warn('Failed to load profile from DB, using fallback:', err);
     }
-  } catch (err) {
-    console.warn('Failed to load profile from DB, using fallback:', err);
-  }
 
-  // Without a readable profile row we cannot confirm an elevated role.
-  return {
-    id: user.id,
-    email: user.email!,
-    fullName: user.user_metadata?.full_name || 'Procurement User',
-    role: 'bidder',
-    organisationName: user.user_metadata?.organisation_name || 'Apex Heavy Engineering Pvt Ltd',
-    createdAt: user.created_at,
-    updatedAt: user.created_at,
-  };
+    // Without a readable profile row we cannot confirm an elevated role.
+    return {
+      id: user.id,
+      email: user.email!,
+      fullName: user.user_metadata?.full_name || 'Procurement User',
+      role: 'bidder',
+      organisationName: user.user_metadata?.organisation_name || 'Apex Heavy Engineering Pvt Ltd',
+      createdAt: user.created_at,
+      updatedAt: user.created_at,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export async function logout() {

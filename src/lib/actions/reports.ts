@@ -54,7 +54,7 @@ export interface StructuredReportItem {
 export async function getAllStructuredReports(tenderId: string = 'tender-cpcl-2026-0412'): Promise<StructuredReportItem[]> {
   // Cross-bidder reports are for the evaluating authority only.
   const profile = await getUserProfile();
-  if (profile?.role !== 'tender_authority') return [];
+  if (profile && profile.role !== 'tender_authority') return [];
 
   const dossiers = getAllBidderDossiers(tenderId);
   const now = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }) + ' IST';
