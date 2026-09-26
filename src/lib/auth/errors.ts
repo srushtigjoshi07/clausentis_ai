@@ -10,6 +10,10 @@ export type AuthErrorCode =
   | 'WEAK_PASSWORD'
   | 'PASSWORD_MISMATCH'
   | 'NETWORK_ERROR'
+  | 'INVALID_CREDENTIALS'
+  | 'AUTH_PROVIDER_DISABLED'
+  | 'MISSING_CONFIGURATION'
+  | 'UNKNOWN_AUTH_ERROR'
   | 'SUPABASE_ERROR';
 
 export interface AuthErrorDetails {
@@ -21,13 +25,13 @@ export interface AuthErrorDetails {
 
 /**
  * Classifies an auth error into an actionable, user-friendly response.
- * Never exposes raw technical errors like "email rate limit exceeded" as the primary message.
+ * Never exposes raw technical errors as the primary user message.
  */
 export function classifyAuthError(error: unknown): AuthErrorDetails {
   if (!error) {
     return {
-      code: 'SUPABASE_ERROR',
-      message: 'An unknown error occurred during authentication.',
+      code: 'UNKNOWN_AUTH_ERROR',
+      message: 'Sign-in failed. Please try again.',
     };
   }
 
@@ -55,7 +59,81 @@ export function classifyAuthError(error: unknown): AuthErrorDetails {
     .filter(Boolean)
     .join(' - ') || 'No secondary details available';
 
-  // 1. Email rate limiting (HTTP 429 or specific Supabase error codes)
+  // 1. Missing Configuration
+  if (
+    errorCode === 'missing_configuration' ||
+    rawLower.includes('configuration is unavailable') ||
+    rawLower.includes('missing configuration') ||
+    rawLower.includes('missing supabase')
+  ) {
+    return {
+      code: 'MISSING_CONFIGURATION',
+      message: 'Authentication configuration is unavailable.',
+      suggestion: 'Please verify that Supabase environment variables are properly configured.',
+      technicalDetails,
+    };
+  }
+
+  // 2. Network / Connectivity / Fetch failure
+  if (
+    errorCode === 'authretryablefetcherror' ||
+    errorCode.includes('fetch') ||
+    rawLower.includes('failed to fetch') ||
+    rawLower.includes('fetch failed') ||
+    rawLower.includes('networkerror') ||
+    rawLower.includes('network error') ||
+    rawLower.includes('enotfound') ||
+    rawLower.includes('econnrefused') ||
+    rawLower.includes('econnreset') ||
+    rawLower.includes('etimedout') ||
+    rawLower.includes('timeout') ||
+    rawLower.includes('load failed') ||
+    rawLower.includes('und_err')
+  ) {
+    return {
+      code: 'NETWORK_ERROR',
+      message: 'Unable to reach the authentication service. Please check your connection and try again.',
+      suggestion: 'Ensure your internet connection is active and firewall settings permit outbound HTTPS.',
+      technicalDetails,
+    };
+  }
+
+  // 3. Invalid credentials
+  if (
+    errorCode === 'invalid_credentials' ||
+    errorCode === 'invalid_grant' ||
+    rawLower.includes('invalid login credentials') ||
+    rawLower.includes('invalid credentials') ||
+    rawLower.includes('invalid email or password') ||
+    rawLower.includes('user not found')
+  ) {
+    return {
+      code: 'INVALID_CREDENTIALS',
+      message: 'Invalid email or password.',
+      suggestion: 'Please verify your email address and password and try again.',
+      technicalDetails,
+    };
+  }
+
+  // 4. Auth Provider Disabled
+  if (
+    errorCode === 'provider_disabled' ||
+    errorCode === 'signup_disabled' ||
+    errorCode === 'email_provider_disabled' ||
+    rawLower.includes('provider is disabled') ||
+    rawLower.includes('provider disabled') ||
+    rawLower.includes('signups not allowed') ||
+    rawLower.includes('signups are disabled')
+  ) {
+    return {
+      code: 'AUTH_PROVIDER_DISABLED',
+      message: 'Email/password sign-in is currently unavailable.',
+      suggestion: 'Please contact the administrator or check authentication provider settings.',
+      technicalDetails,
+    };
+  }
+
+  // 5. Email rate limiting (HTTP 429 or specific Supabase error codes)
   if (
     status === 429 ||
     errorCode === 'over_email_send_rate_limit' ||
@@ -72,7 +150,7 @@ export function classifyAuthError(error: unknown): AuthErrorDetails {
     };
   }
 
-  // 2. Email already registered
+  // 6. Email already registered
   if (
     errorCode === 'user_already_exists' ||
     errorCode === 'email_exists' ||
@@ -89,7 +167,7 @@ export function classifyAuthError(error: unknown): AuthErrorDetails {
     };
   }
 
-  // 3. Invalid email format
+  // 7. Invalid email format
   if (
     (errorCode === 'validation_failed' && rawLower.includes('email')) ||
     rawLower.includes('invalid email') ||
@@ -105,7 +183,7 @@ export function classifyAuthError(error: unknown): AuthErrorDetails {
     };
   }
 
-  // 4. Password mismatch
+  // 8. Password mismatch
   if (
     rawLower.includes('password mismatch') ||
     rawLower.includes('passwords do not match') ||
@@ -119,7 +197,7 @@ export function classifyAuthError(error: unknown): AuthErrorDetails {
     };
   }
 
-  // 5. Weak password
+  // 9. Weak password
   if (
     errorCode === 'weak_password' ||
     rawLower.includes('weak password') ||
@@ -135,30 +213,13 @@ export function classifyAuthError(error: unknown): AuthErrorDetails {
     };
   }
 
-  // 6. Network / Connectivity error
-  if (
-    rawLower.includes('failed to fetch') ||
-    rawLower.includes('networkerror') ||
-    rawLower.includes('network error') ||
-    rawLower.includes('fetch failed') ||
-    rawLower.includes('timeout') ||
-    rawLower.includes('econnrefused')
-  ) {
-    return {
-      code: 'NETWORK_ERROR',
-      message: 'Unable to reach the authentication server. Please check your network connection and try again.',
-      suggestion: 'Ensure your internet connection is active and firewall settings permit outbound HTTPS.',
-      technicalDetails,
-    };
-  }
-
-  // 7. Supabase generic / other errors
+  // 10. Generic / other errors
   return {
-    code: 'SUPABASE_ERROR',
+    code: 'UNKNOWN_AUTH_ERROR',
     message:
-      rawMsg.length > 0 && !rawMsg.includes('{"')
+      rawMsg.length > 0 && !rawMsg.includes('{"') && !rawMsg.includes('fetch')
         ? rawMsg
-        : 'An unexpected authentication error occurred. Please try again or contact support.',
+        : 'Sign-in failed. Please try again.',
     technicalDetails,
   };
 }

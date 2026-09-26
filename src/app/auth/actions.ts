@@ -44,7 +44,6 @@ export interface AuthActionResult {
 }
 
 export async function login(formData: FormData): Promise<AuthActionResult | void> {
-  const supabase = await createClient();
   const email = (formData.get('email') as string)?.trim() || '';
   const password = (formData.get('password') as string) || '';
   const selectedRole = (formData.get('role') as UserRole) || 'bidder';
@@ -63,90 +62,127 @@ export async function login(formData: FormData): Promise<AuthActionResult | void
     };
   }
 
-  const { data: authData, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
-  if (error) {
-    const lower = error.message.toLowerCase();
-    if (lower.includes('email not confirmed') || lower.includes('unconfirmed')) {
+  if (
+    !supabaseUrl ||
+    !supabaseKey ||
+    supabaseUrl === 'your_supabase_project_url' ||
+    supabaseKey === 'your_supabase_anon_key'
+  ) {
+    return {
+      error: 'Authentication configuration is unavailable.',
+      errorCode: 'MISSING_CONFIGURATION',
+      details: 'Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    };
+  }
+
+  try {
+    const supabase = await createClient();
+
+    const { data: authData, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      const lower = (error.message || '').toLowerCase();
+      if (lower.includes('email not confirmed') || lower.includes('unconfirmed')) {
+        return {
+          error: 'Please verify your email address before signing in. Check your inbox for the confirmation link.',
+          errorCode: 'SUPABASE_ERROR',
+          details: error.message,
+        };
+      }
+
+      if (lower.includes('invalid login credentials') || lower.includes('invalid credentials')) {
+        return {
+          error: 'Invalid email or password.',
+          errorCode: 'INVALID_CREDENTIALS',
+          details: error.message,
+        };
+      }
+
+      const classified = classifyAuthError(error);
       return {
-        error: 'Please verify your email address before signing in. Check your inbox for the confirmation link.',
-        errorCode: 'SUPABASE_ERROR',
-        details: error.message,
+        error: classified.message,
+        errorCode: classified.code,
+        details: classified.technicalDetails,
       };
     }
 
-    if (lower.includes('invalid login credentials') || lower.includes('invalid credentials')) {
+    if (!authData?.user) {
       return {
-        error: 'Invalid email or password. Please verify your credentials and try again.',
-        errorCode: 'SUPABASE_ERROR',
-        details: error.message,
+        error: 'Sign-in failed. Please try again.',
+        errorCode: 'UNKNOWN_AUTH_ERROR',
       };
     }
 
-    const classified = classifyAuthError(error);
+    const user = authData.user;
+    let role: UserRole = selectedRole;
+
+    if (user) {
+      // Attempt reading authoritative persisted role from profiles table
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role, company_name, full_name')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (profile?.role) {
+          // Enforce the securely persisted database role
+          role = profile.role as UserRole;
+        } else {
+          // If profile row doesn't have a role, update it with selectedRole
+          await supabase
+            .from('profiles')
+            .update({
+              role: selectedRole,
+              company_name: selectedRole === 'tender_authority'
+                ? 'Chennai Petroleum Corporation Limited'
+                : 'Apex Heavy Engineering Pvt Ltd',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', user.id);
+        }
+      } catch (err) {
+        console.warn('Profile read warning on login:', err);
+        // Fallback to user_metadata role if present
+        if (user.user_metadata?.role) {
+          role = user.user_metadata.role as UserRole;
+        }
+      }
+
+      // Set secure cookies for middleware route guarding
+      const cookieStore = await cookies();
+      cookieStore.set('clausentis_role', role, { path: '/', maxAge: 60 * 60 * 24 * 30 });
+      cookieStore.set('clausentis_user_id', user.id, { path: '/', maxAge: 60 * 60 * 24 * 30 });
+    }
+
+    revalidatePath('/', 'layout');
+
+    if (role === 'tender_authority') {
+      redirect('/authority/dashboard');
+    } else {
+      redirect('/bidder/dashboard');
+    }
+  } catch (err: any) {
+    if (err?.digest?.startsWith('NEXT_REDIRECT') || err?.message === 'NEXT_REDIRECT') {
+      throw err;
+    }
+
+    const classified = classifyAuthError(err);
     return {
       error: classified.message,
       errorCode: classified.code,
       details: classified.technicalDetails,
     };
   }
-
-  const user = authData.user;
-  let role: UserRole = selectedRole;
-
-  if (user) {
-    // Attempt reading authoritative persisted role from profiles table
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role, company_name, full_name')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (profile?.role) {
-        // Enforce the securely persisted database role
-        role = profile.role as UserRole;
-      } else {
-        // If profile row doesn't have a role, update it with selectedRole
-        await supabase
-          .from('profiles')
-          .update({
-            role: selectedRole,
-            company_name: selectedRole === 'tender_authority'
-              ? 'Chennai Petroleum Corporation Limited'
-              : 'Apex Heavy Engineering Pvt Ltd',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', user.id);
-      }
-    } catch (err) {
-      console.warn('Profile read warning on login:', err);
-      // Fallback to user_metadata role if present
-      if (user.user_metadata?.role) {
-        role = user.user_metadata.role as UserRole;
-      }
-    }
-
-    // Set secure cookies for middleware route guarding
-    const cookieStore = await cookies();
-    cookieStore.set('clausentis_role', role, { path: '/', maxAge: 60 * 60 * 24 * 30 });
-    cookieStore.set('clausentis_user_id', user.id, { path: '/', maxAge: 60 * 60 * 24 * 30 });
-  }
-
-  revalidatePath('/', 'layout');
-
-  if (role === 'tender_authority') {
-    redirect('/authority/dashboard');
-  } else {
-    redirect('/bidder/dashboard');
-  }
 }
 
 export async function signup(formData: FormData): Promise<AuthActionResult | void> {
-  const supabase = await createClient();
   const email = (formData.get('email') as string)?.trim() || '';
   const password = (formData.get('password') as string) || '';
   const confirmPassword = (formData.get('confirm_password') as string) || '';
@@ -178,87 +214,118 @@ export async function signup(formData: FormData): Promise<AuthActionResult | voi
     };
   }
 
-  // Determine site URL for verification callback dynamically
-  const siteUrl = await getSiteUrl();
-  const emailRedirectTo = `${siteUrl}/auth/callback`;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
 
-  // 2. Call Supabase Auth signUp
-  const { data: authData, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        full_name: fullName,
-        role,
-        organisation_name: organisationName,
-        company_name: organisationName,
+  if (
+    !supabaseUrl ||
+    !supabaseKey ||
+    supabaseUrl === 'your_supabase_project_url' ||
+    supabaseKey === 'your_supabase_anon_key'
+  ) {
+    return {
+      error: 'Authentication configuration is unavailable.',
+      errorCode: 'MISSING_CONFIGURATION',
+      details: 'Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    };
+  }
+
+  try {
+    const supabase = await createClient();
+
+    // Determine site URL for verification callback dynamically
+    const siteUrl = await getSiteUrl();
+    const emailRedirectTo = `${siteUrl}/auth/callback`;
+
+    // 2. Call Supabase Auth signUp
+    const { data: authData, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          role,
+          organisation_name: organisationName,
+          company_name: organisationName,
+        },
+        emailRedirectTo,
       },
-      emailRedirectTo,
-    },
-  });
+    });
 
-  // 3. Handle Supabase Auth Errors
-  if (error) {
-    const classified = classifyAuthError(error);
+    // 3. Handle Supabase Auth Errors
+    if (error) {
+      const classified = classifyAuthError(error);
+      return {
+        error: classified.message,
+        errorCode: classified.code,
+        details: classified.technicalDetails,
+      };
+    }
+
+    // 4. Handle Case: Existing User Detection (Supabase returns empty identities array when user already exists)
+    if (authData?.user && Array.isArray(authData.user.identities) && authData.user.identities.length === 0) {
+      return {
+        error: 'An account with this email address already exists. Please sign in instead or reset your password.',
+        errorCode: 'EMAIL_ALREADY_REGISTERED',
+      };
+    }
+
+    // 5. Handle Case: Email Confirmation Required (session is null)
+    if (authData?.user && !authData.session) {
+      return {
+        success: true,
+        requiresEmailVerification: true,
+        email: authData.user.email || email,
+        message: 'Account created. Please check your email to verify your account.',
+      };
+    }
+
+    // 6. Handle Case: Autoconfirm enabled or session is active immediately
+    if (authData?.user && authData.session) {
+      try {
+        // Safely update profile with role and organization info
+        await supabase
+          .from('profiles')
+          .update({
+            full_name: fullName,
+            role,
+            company_name: organisationName,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', authData.user.id);
+      } catch (dbErr) {
+        console.warn('Profile update fallback on signup:', dbErr);
+      }
+
+      const cookieStore = await cookies();
+      cookieStore.set('clausentis_role', role, { path: '/', maxAge: 60 * 60 * 24 * 30 });
+      cookieStore.set('clausentis_user_id', authData.user.id, { path: '/', maxAge: 60 * 60 * 24 * 30 });
+
+      revalidatePath('/', 'layout');
+
+      if (role === 'tender_authority') {
+        redirect('/authority/dashboard');
+      } else {
+        redirect('/bidder/dashboard');
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Registration completed successfully.',
+    };
+  } catch (err: any) {
+    if (err?.digest?.startsWith('NEXT_REDIRECT') || err?.message === 'NEXT_REDIRECT') {
+      throw err;
+    }
+
+    const classified = classifyAuthError(err);
     return {
       error: classified.message,
       errorCode: classified.code,
       details: classified.technicalDetails,
     };
   }
-
-  // 4. Handle Case: Existing User Detection (Supabase returns empty identities array when user already exists)
-  if (authData?.user && Array.isArray(authData.user.identities) && authData.user.identities.length === 0) {
-    return {
-      error: 'An account with this email address already exists. Please sign in instead or reset your password.',
-      errorCode: 'EMAIL_ALREADY_REGISTERED',
-    };
-  }
-
-  // 5. Handle Case: Email Confirmation Required (session is null)
-  if (authData?.user && !authData.session) {
-    return {
-      success: true,
-      requiresEmailVerification: true,
-      email: authData.user.email || email,
-      message: 'Account created. Please check your email to verify your account.',
-    };
-  }
-
-  // 6. Handle Case: Autoconfirm enabled or session is active immediately
-  if (authData?.user && authData.session) {
-    try {
-      // Safely update profile with role and organization info
-      await supabase
-        .from('profiles')
-        .update({
-          full_name: fullName,
-          role,
-          company_name: organisationName,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', authData.user.id);
-    } catch (dbErr) {
-      console.warn('Profile update fallback on signup:', dbErr);
-    }
-
-    const cookieStore = await cookies();
-    cookieStore.set('clausentis_role', role, { path: '/', maxAge: 60 * 60 * 24 * 30 });
-    cookieStore.set('clausentis_user_id', authData.user.id, { path: '/', maxAge: 60 * 60 * 24 * 30 });
-
-    revalidatePath('/', 'layout');
-
-    if (role === 'tender_authority') {
-      redirect('/authority/dashboard');
-    } else {
-      redirect('/bidder/dashboard');
-    }
-  }
-
-  return {
-    success: true,
-    message: 'Registration completed successfully.',
-  };
 }
 
 export async function getUserProfile(): Promise<UserProfile | null> {
