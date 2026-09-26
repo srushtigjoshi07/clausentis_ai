@@ -75,7 +75,7 @@ async function runE2ETest() {
 
   // 4. Test Submission Action and Authority Live Sync
   console.log('\nTesting submitBidPackageAction...');
-  const subResult = await submitBidPackageAction(tender.id, bidderProfile, report);
+  const subResult = await submitBidPackageAction(tender.id, bidderProfile, processedDocs, 1);
   if (!subResult.success || !subResult.submission) {
     throw new Error(`Submission action failed: ${subResult.error}`);
   }

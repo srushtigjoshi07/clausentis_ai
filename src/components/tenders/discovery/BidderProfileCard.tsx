@@ -149,7 +149,7 @@ export function BidderProfileCard({
               type="text"
               value={profile.udyamNumber || ''}
               onChange={(e) => setProfile({ ...profile, udyamNumber: e.target.value })}
-              placeholder="e.g. UDYAM-TN-02-0048192"
+              placeholder="e.g. UDYAM-TN-02-0049182"
               className="w-full rounded-md border border-[#E5E5E5] bg-white px-3 py-2 text-[#111111] font-mono focus:border-[#111111] focus:outline-none"
             />
           </div>

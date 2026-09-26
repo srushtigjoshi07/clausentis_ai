@@ -22,6 +22,7 @@ import {
   ClausentisPrototypeSubmissionAdapter,
 } from '@/lib/tender-discovery/submission-adapter';
 import { registerSubmittedBidDossier } from '@/lib/compliance/repository';
+import { sanitizeSubmittedDocuments } from '@/lib/tender-discovery/evidence-seal';
 import { UdyamProvider } from '@/lib/providers/providers';
 import type {
   BidderEvaluationDossier,
@@ -40,8 +41,35 @@ import type {
   TenderSearchResult,
 } from '@/types/tender-discovery';
 
-// In-memory session store for prototype submissions
-const GLOBAL_SUBMISSION_STORE = new Map<string, BidSubmissionRecord>();
+// In-memory fallback store for prototype submissions, keyed by submission id.
+// Each entry remembers its owner so one bidder never sees another's submissions.
+const GLOBAL_SUBMISSION_STORE = new Map<string, { ownerUserId: string; record: BidSubmissionRecord }>();
+
+/**
+ * Runs the compliance engine on documents whose evidence the server can trust.
+ * Documents with a missing/invalid evidence seal lose their extracted facts, and are flagged.
+ */
+function evaluateOnServer(
+  tender: DiscoveredTender,
+  bidderProfile: BidderProfile,
+  documents: BidUploadedDocument[],
+  version: number
+): BidComplianceReport {
+  const { documents: trusted, unverifiedFiles } = sanitizeSubmittedDocuments(documents);
+  const report = runBidComplianceEvaluation(tender, bidderProfile, trusted, version);
+  for (const fileName of unverifiedFiles) {
+    report.criticalFindings.push({
+      id: `crit-evidence-seal-${fileName}`,
+      title: 'Evidence Integrity Check Failed',
+      required: 'Facts extracted by the Clausentis server',
+      evidence: `Extracted values for "${fileName}" were altered or not produced by the server and were discarded.`,
+      source: fileName,
+      status: 'HIGH_RISK',
+      remediation: 'Re-upload the document so it can be re-processed.',
+    });
+  }
+  return report;
+}
 
 // ─────────────────────────────────────────────────────────────
 // 1. Search Active Tenders
@@ -94,12 +122,7 @@ export async function runBidVerificationAction(
   }
 
   // Run verification engine
-  const report = runBidComplianceEvaluation(
-    tender,
-    bidderProfile,
-    documents,
-    version
-  );
+  const report = evaluateOnServer(tender, bidderProfile, documents, version);
 
   // Record audit log if authenticated
   try {
@@ -136,7 +159,8 @@ export async function runBidVerificationAction(
 export async function submitBidPackageAction(
   tenderId: string,
   bidderProfile: BidderProfile,
-  report: BidComplianceReport,
+  documents: BidUploadedDocument[],
+  version: number,
   options?: { allowUnresolvedSubmission?: boolean }
 ): Promise<{
   success: boolean;
@@ -144,10 +168,22 @@ export async function submitBidPackageAction(
   error?: string;
 }> {
   try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: 'Please sign in to submit a bid.' };
+    }
+
     const tender = await getDiscoveredTenderAction(tenderId);
     if (!tender) {
       return { success: false, error: 'Tender not found.' };
     }
+
+    // Re-evaluate on the server. The browser's copy of the report is never trusted,
+    // otherwise a bidder could submit an edited score to the authority.
+    const report = evaluateOnServer(tender, bidderProfile, documents, version);
 
     const adapter = new ClausentisPrototypeSubmissionAdapter();
 
@@ -171,31 +207,43 @@ export async function submitBidPackageAction(
     const submissionRecord = await adapter.submitBid(preparedPackage);
 
     // Store in-memory
-    GLOBAL_SUBMISSION_STORE.set(submissionRecord.submissionId, submissionRecord);
+    GLOBAL_SUBMISSION_STORE.set(submissionRecord.submissionId, { ownerUserId: user.id, record: submissionRecord });
 
     // Register dossier into Shared State Store so Authority Portal reflects it live
     try {
       const nowFormatted = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const hasCriticalFailure = report.matrix.some((r) => r.status === 'FAIL' && r.riskLevel === 'CRITICAL');
+      const hasHighMismatch = report.crossDocumentMismatches.some((m) => m.severity === 'HIGH');
       const calculatedRisk: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' =
-        report.mandatoryFailed > 0 ? 'HIGH' : report.mandatoryMissing > 0 ? 'MEDIUM' : 'LOW';
+        hasCriticalFailure || report.mandatoryFailed >= 2 || (report.mandatoryFailed > 0 && hasHighMismatch)
+          ? 'CRITICAL'
+          : report.mandatoryFailed > 0 || hasHighMismatch || report.mandatoryMissing > 0
+          ? 'HIGH'
+          : report.warningsCount > 0
+          ? 'MEDIUM'
+          : 'LOW';
 
-      const udyamNumber = bidderProfile.udyamNumber || 'UDYAM-TN-02-0049182';
-      const statutoryList: BidderEvaluationDossier['statutoryVerifications'] = [
-        {
-          providerId: 'gstn-api',
-          providerName: 'GSTN API Registry',
-          status: 'ACTIVE',
-          concordant: true,
-          details: `Active registration confirmed for GSTIN ${bidderProfile.gstin}`,
-        },
-        {
-          providerId: 'pan-nsdl',
-          providerName: 'NSDL Income Tax PAN Registry',
-          status: 'ACTIVE',
-          concordant: true,
-          details: `Valid PAN identity record verified for ${bidderProfile.pan}`,
-        },
-      ];
+      const udyamNumber = bidderProfile.udyamNumber;
+      // Reflect what the engine actually checked rather than asserting "ACTIVE" for every source.
+      const statutoryRow = (id: string) => report.matrix.find((r) => r.id === id);
+      const statutoryList: BidderEvaluationDossier['statutoryVerifications'] = (
+        [
+          ['req-leg-01', 'gstn', 'GST Registry (Sandbox)'],
+          ['req-leg-02', 'pan', 'Income Tax PAN'],
+          ['req-dec-01', 'debarment', 'Debarment Registry (Sandbox)'],
+        ] as const
+      ).flatMap(([rowId, providerId, providerName]) => {
+        const row = statutoryRow(rowId);
+        return row
+          ? [{
+              providerId,
+              providerName,
+              status: row.status,
+              concordant: row.status === 'PASS',
+              details: row.bidderEvidence,
+            }]
+          : [];
+      });
 
       if (udyamNumber) {
         const udyamProvider = new UdyamProvider();
@@ -226,7 +274,8 @@ export async function submitBidPackageAction(
       const dossier: BidderEvaluationDossier = {
         bidId: submissionRecord.submissionId.toLowerCase(),
         submissionId: submissionRecord.submissionId,
-        tenderId: 'tender-cpcl-2026-0412',
+        ownerUserId: user.id,
+        tenderId: tender.id,
         tenderReference: tender.referenceNumber,
         tenderTitle: tender.title,
         bidderName: bidderProfile.companyName,
@@ -234,13 +283,13 @@ export async function submitBidPackageAction(
         registrationNumber: bidderProfile.pan,
         gstin: bidderProfile.gstin,
         pan: bidderProfile.pan,
-        udyamNumber,
+        udyamNumber: udyamNumber || 'Not registered',
         registeredAddress: bidderProfile.registeredAddress,
         contactPerson: bidderProfile.contactPerson,
         contactEmail: bidderProfile.contactEmail,
-        bidValue: '₹14.80 Cr',
+        bidValue: 'Not disclosed (financial cover sealed)',
         submittedAt: nowFormatted,
-        status: report.mandatoryFailed === 0 && report.mandatoryMissing === 0 ? 'READY_FOR_REVIEW' : 'REQUIRES_ATTENTION',
+        status: report.status === 'READY_FOR_SUBMISSION' ? 'READY_FOR_REVIEW' : 'REQUIRES_ATTENTION',
         complianceScore: report.overallScore,
         riskLevel: calculatedRisk,
         riskReasons: report.criticalFindings.map((f) => f.title),
@@ -292,7 +341,12 @@ export async function submitBidPackageAction(
           }
         ],
         aiRecommendation: {
-          recommendation: report.mandatoryFailed === 0 && report.mandatoryMissing === 0 ? 'COMPLIANT' : 'REQUIRES MANUAL REVIEW',
+          recommendation:
+            calculatedRisk === 'CRITICAL'
+              ? 'NON-COMPLIANT'
+              : report.status === 'READY_FOR_SUBMISSION' && report.warningsCount === 0
+              ? 'COMPLIANT'
+              : 'REQUIRES MANUAL REVIEW',
           confidence: 96,
           summary: `Automated qualification verification scored at ${report.overallScore}%. Mandatory criteria: ${report.mandatoryPassed}/${report.mandatoryTotal} passed.`,
           keyRiskFactors: report.criticalFindings.map((f) => f.title),
@@ -306,12 +360,7 @@ export async function submitBidPackageAction(
 
     // Attempt Supabase persistence
     try {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
+      {
         // Attempt insert to bid_submissions table
         try {
           await supabase
@@ -383,14 +432,20 @@ export async function submitBidPackageAction(
 export async function getBidSubmissionReceiptAction(
   submissionId: string
 ): Promise<BidSubmissionRecord | null> {
-  // Check in-memory store
-  if (GLOBAL_SUBMISSION_STORE.has(submissionId)) {
-    return GLOBAL_SUBMISSION_STORE.get(submissionId) || null;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // Check in-memory store (owner only; RLS covers the database path)
+  const cached = GLOBAL_SUBMISSION_STORE.get(submissionId);
+  if (cached) {
+    return cached.ownerUserId === user.id ? cached.record : null;
   }
 
   // Check Supabase
   try {
-    const supabase = await createClient();
     const { data } = await supabase
       .from('bid_submissions')
       .select('*')
@@ -468,9 +523,19 @@ export async function getMyBidSubmissionsAction(): Promise<BidSubmissionRecord[]
     console.warn('[TenderDiscovery] Supabase bid query fallback:', err);
   }
 
-  // 2. Check in-memory session store
-  for (const record of GLOBAL_SUBMISSION_STORE.values()) {
-    submissions.push(record);
+  // 2. Check in-memory session store (only this user's submissions)
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      for (const { ownerUserId, record } of GLOBAL_SUBMISSION_STORE.values()) {
+        if (ownerUserId === user.id) submissions.push(record);
+      }
+    }
+  } catch {
+    // No session available
   }
 
   return submissions;

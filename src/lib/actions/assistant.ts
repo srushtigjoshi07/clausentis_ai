@@ -1,6 +1,7 @@
 'use server';
 
 import { getGroqClient, GROQ_DEFAULT_MODEL } from '@/lib/ai/groq';
+import { getUserProfile } from '@/app/auth/actions';
 import { AssistantChatMessage, AssistantEvidenceCitation, UserRole } from '@/types/auth-roles';
 
 interface AssistantContext {
@@ -11,11 +12,23 @@ interface AssistantContext {
 }
 
 export async function askClausentisAssistant(
-  role: UserRole,
   userMessage: string,
   history: { role: 'user' | 'assistant'; content: string }[],
   context?: AssistantContext
 ): Promise<AssistantChatMessage> {
+  // Server actions are public endpoints: require a session so the Groq key cannot be used
+  // anonymously, and take the role from the profile rather than the caller.
+  const profile = await getUserProfile();
+  if (!profile) {
+    return {
+      id: `msg-${Date.now()}`,
+      role: 'assistant',
+      content: 'Please sign in to use the Clausentis assistant.',
+      citations: [],
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+  }
+  const role: UserRole = profile.role;
   const apiKey = process.env.GROQ_API_KEY;
 
   const rolePrompt = role === 'bidder'
@@ -70,31 +83,9 @@ Tone: Objective, audit-grade, defensible, authoritative, neutral.`;
 
       const responseText = completion.choices[0]?.message?.content || 'Unable to generate analysis response.';
 
-      // Extract synthetic or real citations from text
+      // The model is not given any documents, so there are no grounded citations to attach.
+      // (Previously hard-coded "citations" with invented figures were appended to every answer.)
       const citations: AssistantEvidenceCitation[] = [];
-      if (role === 'bidder') {
-        citations.push({
-          documentName: 'CPCL_RFP_Section_IV.pdf',
-          page: 18,
-          snippet: 'Clause 4.2: Minimum average annual financial turnover ₹45.0 Cr over past 3 financial years.'
-        });
-        citations.push({
-          documentName: 'Apex_Audited_Financials_FY24.pdf',
-          page: 12,
-          snippet: 'Schedule III: Average turnover certified by Statutory Auditor as ₹54.20 Cr.'
-        });
-      } else {
-        citations.push({
-          documentName: 'Tender_Evaluation_Matrix_Rev2.pdf',
-          page: 4,
-          snippet: 'Rule 8(c): Mandatory EMD Bank Guarantee confirmation via SFMS.'
-        });
-        citations.push({
-          documentName: 'Bidder_Technical_Comparative.xlsx',
-          page: 1,
-          snippet: 'Vertex Marine: ISO 45001 certificate expired on 2026-01-15 (Critical Finding).'
-        });
-      }
 
       return {
         id: `msg-${Date.now()}`,

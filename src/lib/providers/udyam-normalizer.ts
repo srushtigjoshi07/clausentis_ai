@@ -182,7 +182,8 @@ export function compareUdyamRecord(
   else mismatchedFields.push('enterpriseName');
 
   // Field: Permanent Account Number (PAN)
-  if (submitted.pan || govtRecord.pan) {
+  // Compare only when a PAN was actually extracted; an unreadable field is not a contradiction.
+  if (submitted.pan) {
     const subPan = normalizeIdentifier(submitted.pan);
     const govPan = normalizeIdentifier(govtRecord.pan);
     const panMatch = Boolean(subPan && govPan && subPan === govPan);

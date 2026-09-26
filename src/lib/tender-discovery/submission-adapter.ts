@@ -234,7 +234,9 @@ export class ClausentisPrototypeSubmissionAdapter implements SubmissionAdapter {
           timestamp: formattedTimestamp,
           action: 'Mandatory Compliance Gate Validated',
           actor: 'Clausentis Readiness Gate',
-          details: '100% mandatory compliance criteria confirmed satisfied',
+          details: preparedPackage.mandatoryCompliancePassed
+            ? 'All mandatory compliance criteria satisfied'
+            : 'Submitted with unresolved mandatory findings (bidder override) — flagged for officer review',
         },
         {
           timestamp: formattedTimestamp,

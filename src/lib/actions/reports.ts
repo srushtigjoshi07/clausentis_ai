@@ -1,5 +1,6 @@
 'use server';
 
+import { getUserProfile } from '@/app/auth/actions';
 import { createClient } from '@/lib/supabase/server';
 import { getAllBidderDossiers, STANDARD_CPCL_REQUIREMENTS } from '@/lib/compliance/repository';
 import { STATUTORY_PROVIDERS } from '@/lib/providers/registry';
@@ -51,6 +52,10 @@ export interface StructuredReportItem {
  * Returns the complete catalog of all 8 SIH26100 reports computed from actual data
  */
 export async function getAllStructuredReports(tenderId: string = 'tender-cpcl-2026-0412'): Promise<StructuredReportItem[]> {
+  // Cross-bidder reports are for the evaluating authority only.
+  const profile = await getUserProfile();
+  if (profile?.role !== 'tender_authority') return [];
+
   const dossiers = getAllBidderDossiers(tenderId);
   const now = new Date().toLocaleString('en-GB', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }) + ' IST';
 

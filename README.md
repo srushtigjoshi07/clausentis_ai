@@ -20,6 +20,26 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Configuration
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase project |
+| `GROQ_API_KEY` | For AI features | Tender requirement extraction and assistant |
+| `EVIDENCE_SIGNING_SECRET` | Yes in production | HMAC key that seals facts extracted from uploaded bid documents so a bidder cannot edit them in the browser before submission. Without it, sealing is skipped (dev only). |
+
+### Roles
+
+A user's role comes only from `profiles.role` in the database. Users cannot change it themselves (migration `00012_security_hardening.sql`). To demo both portals, use two accounts and promote the officer account from the Supabase SQL editor:
+
+```sql
+update public.profiles set role = 'tender_authority' where email = 'officer@tenderai.com';
+```
+
+### Verification sources
+
+All government connectors (Udyam, GST, MCA, PAN, EPFO/ESIC, NSIC, BIS, debarment, DigiLocker) read the synthetic records in `src/data/government`. No live government API is wired up yet. In "Production API" mode, connectors report *not configured* rather than presenting sandbox data as live.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

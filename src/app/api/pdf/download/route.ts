@@ -54,6 +54,10 @@ export async function GET(req: NextRequest) {
       });
     } else if (type === 'single-matched-requirements' || type === 'compliance-report') {
       const dossier = getBidderDossier(bidId) || getAllBidderDossiers()[0];
+      // Bidders may only export their own submitted bid (seeded demo dossiers have no owner).
+      if (profile.role !== 'tender_authority' && dossier.ownerUserId && dossier.ownerUserId !== profile.id) {
+        return NextResponse.json({ error: 'You can only download reports for your own bids' }, { status: 403 });
+      }
       const docType = type === 'compliance-report' ? 'compliance-report' : 'matched-requirements';
       filename = generatePdfFilename(docType, dossier.shortName || dossier.bidderName);
       buffer = await generateMatchedRequirementsPdfBuffer({

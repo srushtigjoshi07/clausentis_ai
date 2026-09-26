@@ -27,7 +27,7 @@ export default function SihCoveragePage() {
     companyName: 'Apex Heavy Engineering Pvt Ltd',
     pan: 'AABCA1234F',
     gstin: '33AABCA1234F1Z8',
-    udyamNumber: 'UDYAM-TN-02-0048192',
+    udyamNumber: 'UDYAM-TN-02-0049182',
     localContentPercent: 62.5,
   });
 

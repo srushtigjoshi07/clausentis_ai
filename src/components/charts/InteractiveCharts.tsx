@@ -277,7 +277,6 @@ export function DonutGaugeChart({
   const circumference = 2 * Math.PI * radius;
 
   // Calculate cumulative offsets
-  let accumulatedPercent = 0;
 
   return (
     <div className="bg-white rounded-xl border border-[#E5E5E5] p-5 shadow-2xs">
@@ -303,8 +302,8 @@ export function DonutGaugeChart({
             {/* Slices */}
             {slices.map((slice, i) => {
               const dashArray = (slice.percentage / 100) * circumference;
-              const dashOffset = -((accumulatedPercent / 100) * circumference);
-              accumulatedPercent += slice.percentage;
+              const precedingPercent = slices.slice(0, i).reduce((sum, s) => sum + s.percentage, 0);
+              const dashOffset = -((precedingPercent / 100) * circumference);
               const isHovered = hoveredSlice?.label === slice.label;
 
               return (

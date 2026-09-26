@@ -72,7 +72,6 @@ How can I assist your bid preparation today?`,
     try {
       const history = messages.map(m => ({ role: m.role, content: m.content }));
       const response = await askClausentisAssistant(
-        'bidder',
         text.trim(),
         history,
         {

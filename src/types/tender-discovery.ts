@@ -142,6 +142,8 @@ export interface BidUploadedDocument {
   verifiedAt?: string;
   extractedFacts?: Record<string, unknown>;
   forensicReport?: DocumentForensicReport;
+  /** Server HMAC over the extracted evidence; see lib/tender-discovery/evidence-seal.ts */
+  evidenceSeal?: string;
 }
 
 // ─────────────────────────────────────────────────────────────

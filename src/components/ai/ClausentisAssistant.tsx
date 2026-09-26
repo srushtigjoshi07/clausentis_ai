@@ -80,7 +80,6 @@ export function ClausentisAssistant({ role, tenderId, tenderTitle }: ClausentisA
     try {
       const history = messages.map(m => ({ role: m.role, content: m.content }));
       const response = await askClausentisAssistant(
-        role,
         textToSend,
         history,
         {

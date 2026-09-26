@@ -13,6 +13,8 @@ import { parsePdfDocument } from '@/lib/document/pdf-parser';
 import { extractBidderFactsWithHeuristics } from '@/lib/ai/cross-document-extractor';
 import { UdyamProvider } from '@/lib/providers/providers';
 import { analyzeDocumentForensics } from '@/lib/forensics';
+import { createClient } from '@/lib/supabase/server';
+import { sealEvidence } from '@/lib/tender-discovery/evidence-seal';
 import type { BidUploadedDocument } from '@/types/tender-discovery';
 
 export interface ProcessedDocumentResult {
@@ -113,6 +115,12 @@ export async function processBidderDocumentAction(
   formData: FormData
 ): Promise<ProcessedDocumentResult> {
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { success: false, error: 'Please sign in to upload bid documents.' };
+    }
+
     const file = formData.get('file') as File | null;
     if (!file) {
       return { success: false, error: 'No file was provided.' };
@@ -152,7 +160,9 @@ export async function processBidderDocumentAction(
     // Parse PDF if PDF, or handle text
     if (isPdf) {
       try {
-        const parsed = await parsePdfDocument(arrayBuffer);
+        // pdf.js transfers (detaches) the buffer it is given; pass a copy so the
+        // forensics pass below can still read the original bytes.
+        const parsed = await parsePdfDocument(arrayBuffer.slice(0));
         fullText = parsed.fullText;
         pages = parsed.pages.map((p) => ({ pageNumber: p.pageNumber, cleanedText: p.cleanedText }));
       } catch (pdfErr) {
@@ -208,21 +218,30 @@ export async function processBidderDocumentAction(
     }
 
     // 2. Experience Extraction & Page Citation
-    const expMatch = fullText.match(/(?:standing|operational\s*experience|experience\s*of)[^0-9]*(\d+(?:\.\d+)?)\s*(?:years?|yrs)/i);
+    // Prefer an explicit "operational experience: N years" statement, then a total-standing line,
+    // then the first standing/experience figure in the document.
+    const expMatch =
+      fullText.match(/operational\s+experience\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*(?:consecutive\s+)?(?:years?|yrs)/i) ||
+      fullText.match(/total\s+operational\s+standing[^\n]*?(\d+(?:\.\d+)?)\s*years/i) ||
+      fullText.match(/(?:standing|operational\s*experience|experience\s*of)[^0-9]*(\d+(?:\.\d+)?)\s*(?:consecutive\s+)?(?:years?|yrs)/i);
     if (expMatch && !extractedFacts.experienceYears) {
       const val = parseFloat(expMatch[1]);
       if (!isNaN(val)) {
         extractedFacts.experienceYears = val;
       }
     }
-    if (!extractedFacts.experienceYears && rawFacts.experiences && rawFacts.experiences.length > 0) {
-      extractedFacts.experienceYears = Math.min(rawFacts.experiences.length * 2.5, 8.0);
-    }
     if (extractedFacts.experienceYears) {
       const matchedPage = pages.find((p) => /experience|standing|completion|work\s*order/i.test(p.cleanedText));
       extractedFacts.experiencePage = matchedPage ? matchedPage.pageNumber : 2;
     }
-    extractedFacts.completedProjects = rawFacts.experiences?.length || 3;
+    // Only report a project count when projects were actually found; never assume one.
+    // Track-record schedules list one project per row ending in "<Mon YYYY> <N> Years".
+    const trackRecordRows = fullText.match(/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{4}\s+\d+(?:\.\d+)?\s+years\b/gi) || [];
+    if (rawFacts.experiences && rawFacts.experiences.length > 0) {
+      extractedFacts.completedProjects = rawFacts.experiences.length;
+    } else if (trackRecordRows.length > 0) {
+      extractedFacts.completedProjects = trackRecordRows.length;
+    }
 
     // 3. Local Content Extraction & Citation
     const localContentMatch = fullText.match(/(\d+(?:\.\d+)?)\s*%\s*(?:local|domestic|make\s*in\s*india)/i) ||
@@ -244,10 +263,17 @@ export async function processBidderDocumentAction(
       if (textLower.includes('nil deviation') || textLower.includes('zero deviation') || textLower.includes('no deviations')) {
         extractedFacts.deviationsCount = 0;
         extractedFacts.isCompliant = true;
-      } else if (textLower.includes('90 bar') && textLower.includes('120 bar')) {
-        // Known deficient test case
-        extractedFacts.deviationsCount = 1;
-        extractedFacts.isCompliant = false;
+      } else {
+        // Compliance matrices mark each parameter with an upper-case status column.
+        const deviations = (fullText.match(/\bNON-COMPLIANT\b|\bNON-CONFORMANCE\b|\bDEVIATION\b/g) || []).length;
+        const conformant = (fullText.match(/\bCOMPLIANT\b|\bFULL\s+CONFORMANCE\b/g) || []).length;
+        if (deviations > 0) {
+          extractedFacts.deviationsCount = deviations;
+          extractedFacts.isCompliant = false;
+        } else if (conformant > 0) {
+          extractedFacts.deviationsCount = 0;
+          extractedFacts.isCompliant = true;
+        }
       }
     }
 
@@ -334,7 +360,7 @@ export async function processBidderDocumentAction(
 
     return {
       success: true,
-      doc: resultDoc,
+      doc: sealEvidence(resultDoc),
     };
   } catch (err) {
     console.error('[DocProcessor] Processing failed:', err);

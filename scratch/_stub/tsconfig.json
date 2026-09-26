@@ -1,0 +1,1 @@
+{ "extends": "../../tsconfig.json", "compilerOptions": { "baseUrl": "../..", "paths": { "@/lib/supabase/server": ["./scratch/_stub/supabase-server.ts"], "@/*": ["./src/*"] } } }

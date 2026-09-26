@@ -473,7 +473,8 @@ async function runSuite() {
     const bidderB = getBidderDossier('bid-pqr-04');
     const hasDeficit = bidderB !== null && 
       bidderB.complianceScore < 70 && 
-      bidderB.riskLevel === 'HIGH' && 
+      // 3 mandatory failures plus a cross-document contradiction is CRITICAL in the deterministic engine
+      bidderB.riskLevel === 'CRITICAL' && 
       bidderB.crossDocumentFindings.some(f => f.findingType === 'TURNOVER_MISMATCH');
 
     assert(
@@ -490,7 +491,8 @@ async function runSuite() {
   try {
     const bidderC = getBidderDossier('bid-xyz-03');
     const hasMissingDoc = bidderC !== null && 
-      bidderC.riskLevel === 'MEDIUM' && 
+      // A missing mandatory declaration is HIGH risk in the deterministic engine
+      bidderC.riskLevel === 'HIGH' && 
       bidderC.requirementResults.some(r => r.title.includes('Non-Blacklisting') && (r.status === 'MISSING' || r.status === 'FAIL'));
 
     assert(
@@ -671,7 +673,7 @@ async function runSuite() {
       blacklistingMissing &&
       hasTurnoverContradiction &&
       hasOemContradiction &&
-      bidderB.riskLevel === 'HIGH' &&
+      bidderB.riskLevel === 'CRITICAL' &&
       bidderB.complianceScore < 60;
 
     assert(

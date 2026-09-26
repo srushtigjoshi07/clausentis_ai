@@ -181,7 +181,8 @@ function BidderTenderDiscoveryContent() {
       const res = await submitBidPackageAction(
         selectedTender.id,
         bidderProfile,
-        complianceReport,
+        uploadedDocuments,
+        verificationIteration,
         options
       );
 

@@ -21,6 +21,39 @@ import type {
 } from '@/types/tender-discovery';
 import { UdyamProvider } from '@/lib/providers/providers';
 import type { GovernmentRecordComparisonResult } from '@/lib/providers/types';
+import { GstConnector } from '@/lib/verification/connectors/gst';
+import { BlacklistingConnector } from '@/lib/verification/connectors/extended';
+import { toCrore } from '@/lib/ai/contradiction-engine';
+
+/**
+ * Row for a mandatory criterion whose supporting document exists but whose value could not be
+ * extracted. The engine must not assume a value; the officer verifies it manually.
+ */
+function unextractedRow(
+  id: string,
+  requirementTitle: string,
+  category: ComplianceMatrixRow['category'],
+  tenderClauseReference: string,
+  requiredCriteria: string,
+  fileName: string,
+  what: string
+): ComplianceMatrixRow {
+  return {
+    id,
+    requirementTitle,
+    category,
+    tenderClauseReference,
+    requiredCriteria,
+    bidderEvidence: `${what} could not be extracted from "${fileName}".`,
+    status: 'WARNING',
+    confidence: 50,
+    riskLevel: 'MEDIUM',
+    sourceDocument: fileName,
+    failureReason: `${what} not machine-readable; value was not assumed.`,
+    remediationAction: 'Procurement officer to verify the figure manually against the source document.',
+    isMandatory: true,
+  };
+}
 
 export function runBidComplianceEvaluation(
   tender: DiscoveredTender,
@@ -50,7 +83,6 @@ export function runBidComplianceEvaluation(
       return false;
     });
   };
-  const hasDocType = (type: string) => Boolean(getDoc(type));
 
   const finDoc = getDoc('audited_financials');
   const expDoc = getDoc('experience_certificate');
@@ -69,11 +101,16 @@ export function runBidComplianceEvaluation(
   let bidderTurnover = 0;
   let declaredTurnover = 0;
   let turnoverSourcePage = 4;
+  let turnoverExtracted = false;
 
   if (finDoc) {
-    const facts = finDoc.extractedFacts as { turnover?: number; declaredTurnover?: number; turnoverPage?: number; netWorth?: number } | undefined;
-    bidderTurnover = typeof facts?.turnover === 'number' ? facts.turnover : 8.72;
-    declaredTurnover = typeof facts?.declaredTurnover === 'number' ? facts.declaredTurnover : bidderTurnover;
+    const facts = finDoc.extractedFacts as { turnover?: number; turnoverUnit?: string; declaredTurnover?: number; turnoverPage?: number; netWorth?: number } | undefined;
+    if (typeof facts?.turnover === 'number') {
+      // Extraction may report lakh; thresholds are in crore.
+      bidderTurnover = toCrore(facts.turnover, facts.turnoverUnit);
+      turnoverExtracted = true;
+    }
+    declaredTurnover = typeof facts?.declaredTurnover === 'number' ? toCrore(facts.declaredTurnover, facts.turnoverUnit) : bidderTurnover;
     if (facts?.turnoverPage) turnoverSourcePage = facts.turnoverPage;
   }
 
@@ -103,6 +140,16 @@ export function runBidComplianceEvaluation(
       status: 'MISSING',
       remediation: 'Upload CA-certified balance sheet and turnover certificate.',
     });
+  } else if (!turnoverExtracted) {
+    matrix.push(unextractedRow(
+      'req-fin-01',
+      'Minimum Average Annual Turnover',
+      'Financial',
+      'NIT Section 3.1 • Financial Qualification',
+      `Average annual turnover of at least ₹${minTurnoverRequired.toFixed(2)} Crore during the last 3 audited financial years.`,
+      finDoc.fileName,
+      'Audited turnover'
+    ));
   } else if (bidderTurnover >= minTurnoverRequired) {
     matrix.push({
       id: 'req-fin-01',
@@ -148,8 +195,18 @@ export function runBidComplianceEvaluation(
   }
 
   // Check 1B: Positive Net Worth Requirement
-  if (finDoc) {
-    const netWorth = (finDoc.extractedFacts as { netWorth?: number } | undefined)?.netWorth ?? 4.2;
+  const netWorth = (finDoc?.extractedFacts as { netWorth?: number } | undefined)?.netWorth;
+  if (finDoc && typeof netWorth !== 'number') {
+    matrix.push(unextractedRow(
+      'req-fin-02',
+      'Positive Net Worth',
+      'Financial',
+      'NIT Section 3.3 • Net Worth Criteria',
+      'The net worth of the bidder must be positive as on the close of the immediately preceding financial year.',
+      finDoc.fileName,
+      'Net worth'
+    ));
+  } else if (finDoc && typeof netWorth === 'number') {
     const isNetWorthPositive = netWorth > 0;
     matrix.push({
       id: 'req-fin-02',
@@ -173,14 +230,14 @@ export function runBidComplianceEvaluation(
   const minExpYears = tender.minimumExperienceYears || 5;
   const similarProjectsReq = tender.similarProjectsRequired || 3;
 
-  let bidderExpYears = 0;
-  let bidderProjectsCount = 0;
+  let bidderExpYears: number | undefined;
+  let bidderProjectsCount: number | undefined;
   let expSourcePage = 2;
 
   if (expDoc) {
     const facts = expDoc.extractedFacts as { experienceYears?: number; completedProjects?: number; experiencePage?: number } | undefined;
-    bidderExpYears = typeof facts?.experienceYears === 'number' ? facts.experienceYears : 7;
-    bidderProjectsCount = typeof facts?.completedProjects === 'number' ? facts.completedProjects : 3;
+    bidderExpYears = typeof facts?.experienceYears === 'number' ? facts.experienceYears : undefined;
+    bidderProjectsCount = typeof facts?.completedProjects === 'number' ? facts.completedProjects : undefined;
     if (facts?.experiencePage) expSourcePage = facts.experiencePage;
   }
 
@@ -201,6 +258,16 @@ export function runBidComplianceEvaluation(
       remediationAction: 'Upload client-issued completion certificates or signed work orders with proof of commissioning.',
       isMandatory: true,
     });
+  } else if (bidderExpYears === undefined) {
+    matrix.push(unextractedRow(
+      'req-tech-01',
+      'Past Technical Experience Duration',
+      'Technical',
+      'BQC Clause 4.1 • Prior Experience',
+      `Minimum ${minExpYears} years of continuous experience in similar equipment supply/installation.`,
+      expDoc.fileName,
+      'Years of experience'
+    ));
   } else if (bidderExpYears >= minExpYears) {
     matrix.push({
       id: 'req-tech-01',
@@ -246,7 +313,17 @@ export function runBidComplianceEvaluation(
   }
 
   // Check 2B: Similar Completed Projects Count
-  if (expDoc) {
+  if (expDoc && bidderProjectsCount === undefined) {
+    matrix.push(unextractedRow(
+      'req-tech-02',
+      'Completed Similar Work Orders',
+      'Technical',
+      'BQC Clause 4.2 • Completed Works',
+      `Successfully executed at least ${similarProjectsReq} similar work orders for public sector or corporate clients.`,
+      expDoc.fileName,
+      'Number of completed work orders'
+    ));
+  } else if (expDoc && bidderProjectsCount !== undefined) {
     matrix.push({
       id: 'req-tech-02',
       requirementTitle: 'Completed Similar Work Orders',
@@ -266,25 +343,39 @@ export function runBidComplianceEvaluation(
   // Check 2C: Technical Specification Compliance
   if (techDoc) {
     const techFacts = techDoc.extractedFacts as { isCompliant?: boolean; deviationsCount?: number } | undefined;
-    const isTechPassed = techFacts?.isCompliant !== false && !(typeof techFacts?.deviationsCount === 'number' && techFacts.deviationsCount > 0);
-    matrix.push({
-      id: 'req-tech-03',
-      requirementTitle: 'Technical Specification Conformance',
-      category: 'Technical',
-      tenderClauseReference: 'Technical Specification Section 2',
-      requiredCriteria: 'Unconditional compliance to tender technical parameters, datasheets, and scope of work.',
-      bidderEvidence: isTechPassed
-        ? 'Technical deviation schedule submitted with zero deviations declared.'
-        : 'Technical datasheet indicates deficient parameters / unapproved deviation.',
-      status: isTechPassed ? 'PASS' : 'FAIL',
-      confidence: 95,
-      riskLevel: isTechPassed ? 'LOW' : 'HIGH',
-      sourceDocument: techDoc.fileName,
-      sourcePage: 1,
-      failureReason: !isTechPassed ? 'Technical deviation from mandatory tender specifications.' : undefined,
-      remediationAction: !isTechPassed ? 'Provide OEM-backed technical deviation settlement or conforming model.' : undefined,
-      isMandatory: true,
-    });
+    const hasDeviations = techFacts?.isCompliant === false || (typeof techFacts?.deviationsCount === 'number' && techFacts.deviationsCount > 0);
+    const confirmedNoDeviations = techFacts?.isCompliant === true || techFacts?.deviationsCount === 0;
+    const isTechPassed = !hasDeviations;
+    if (!hasDeviations && !confirmedNoDeviations) {
+      matrix.push(unextractedRow(
+        'req-tech-03',
+        'Technical Specification Conformance',
+        'Technical',
+        'Technical Specification Section 2',
+        'Unconditional compliance to tender technical parameters, datasheets, and scope of work.',
+        techDoc.fileName,
+        'Deviation schedule'
+      ));
+    } else {
+      matrix.push({
+        id: 'req-tech-03',
+        requirementTitle: 'Technical Specification Conformance',
+        category: 'Technical',
+        tenderClauseReference: 'Technical Specification Section 2',
+        requiredCriteria: 'Unconditional compliance to tender technical parameters, datasheets, and scope of work.',
+        bidderEvidence: isTechPassed
+          ? 'Technical deviation schedule submitted with zero deviations declared.'
+          : 'Technical datasheet indicates deficient parameters / unapproved deviation.',
+        status: isTechPassed ? 'PASS' : 'FAIL',
+        confidence: 95,
+        riskLevel: isTechPassed ? 'LOW' : 'HIGH',
+        sourceDocument: techDoc.fileName,
+        sourcePage: 1,
+        failureReason: !isTechPassed ? 'Technical deviation from mandatory tender specifications.' : undefined,
+        remediationAction: !isTechPassed ? 'Provide OEM-backed technical deviation settlement or conforming model.' : undefined,
+        isMandatory: true,
+      });
+    }
     if (!isTechPassed) {
       criticalFindings.push({
         id: 'crit-tech-deviation',
@@ -321,20 +412,71 @@ export function runBidComplianceEvaluation(
   // Check 3A: GSTIN Registration
   const activeGstin = (gstDoc?.extractedFacts as { gstin?: string } | undefined)?.gstin || bidderProfile.gstin;
   if (gstDoc && activeGstin) {
-    matrix.push({
+    // Cross-verify against the GST registry (sandbox data until a live GSTN adapter is configured).
+    const gstResult = new GstConnector().verify(
+      {
+        gstin: activeGstin,
+        legalName: bidderProfile.companyName,
+        pan: (panDoc?.extractedFacts as { pan?: string } | undefined)?.pan || bidderProfile.pan,
+      },
+      'DEMO'
+    );
+    const gstMismatches = gstResult.fields.filter((f) => !f.match).map((f) => f.fieldLabel);
+    const gstRow = (
+      status: ComplianceMatrixRow['status'],
+      riskLevel: ComplianceMatrixRow['riskLevel'],
+      bidderEvidence: string,
+      failureReason?: string,
+      remediationAction?: string
+    ): ComplianceMatrixRow => ({
       id: 'req-leg-01',
-      requirementTitle: 'GST Registration Certificate',
+      requirementTitle: 'GST Registration & Return Filing',
       category: 'Legal & Regulatory',
       tenderClauseReference: 'NIT Section 2 • Statutory Eligibility',
-      requiredCriteria: 'Valid GSTIN registration in the State of project execution or nationwide inter-state registration.',
-      bidderEvidence: `GSTIN ${activeGstin} verified against submitted Form REG-06. Active status confirmed.`,
-      status: 'PASS',
-      confidence: 99,
-      riskLevel: 'LOW',
+      requiredCriteria: 'Active GSTIN registration with returns filed up to date.',
+      bidderEvidence,
+      status,
+      confidence: status === 'PASS' ? 99 : 90,
+      riskLevel,
       sourceDocument: gstDoc.fileName,
       sourcePage: 1,
+      failureReason,
+      remediationAction,
       isMandatory: true,
     });
+
+    if (gstResult.status === 'VERIFIED') {
+      matrix.push(gstRow('PASS', 'LOW', `GSTIN ${activeGstin} active in GST registry [SANDBOX]; returns current.`));
+    } else if (gstResult.status === 'INACTIVE' || gstResult.status === 'MISMATCH') {
+      matrix.push(gstRow(
+        'FAIL',
+        'CRITICAL',
+        `GST registry [SANDBOX]: ${gstResult.message}`,
+        gstResult.message,
+        'Bidder must hold an active GST registration matching the bidding entity.'
+      ));
+      criticalFindings.push({
+        id: 'crit-gst-registry',
+        title: gstResult.status === 'INACTIVE' ? 'GST Registration Not Active' : 'GST Registry Identity Mismatch',
+        required: 'Active GSTIN matching bidder PAN and legal name',
+        evidence: gstMismatches.length > 0 ? `Mismatch on: ${gstMismatches.join(', ')}` : (gstResult.message || ''),
+        source: gstDoc.fileName,
+        page: 1,
+        status: 'FAIL',
+        remediation: 'Verify GSTIN on the GST portal and obtain clarification from the bidder.',
+      });
+    } else {
+      // NOT_FOUND in the sandbox, or REQUIRES_REVIEW (name variation / lapsed return filing)
+      matrix.push(gstRow(
+        'WARNING',
+        'MEDIUM',
+        gstResult.status === 'NOT_FOUND'
+          ? `GSTIN ${activeGstin} not present in the sandbox GST registry.`
+          : `GST registry [SANDBOX] flagged: ${gstMismatches.join(', ')}.`,
+        gstResult.message,
+        'Procurement officer to confirm registration and GSTR-3B filing status on the GST portal.'
+      ));
+    }
   } else {
     matrix.push({
       id: 'req-leg-01',
@@ -391,15 +533,50 @@ export function runBidComplianceEvaluation(
   // ─────────────────────────────────────────────────────────────
   // 4. MANDATORY DECLARATIONS
   // ─────────────────────────────────────────────────────────────
-  // Check 4A: Non-Blacklisting / Non-Debarment Undertaking
-  if (blacklistingDoc) {
+  // Check 4A: Debarment registry + Non-Blacklisting / Non-Debarment Undertaking
+  // A self-declaration cannot clear a bidder who appears on the debarment register.
+  const debarmentResult = new BlacklistingConnector().verify(
+    { legalName: bidderProfile.companyName, pan: bidderProfile.pan },
+    'DEMO'
+  );
+  const declaredDebarred = (blacklistingDoc?.extractedFacts as { isNonDebarred?: boolean } | undefined)?.isNonDebarred === false;
+  if (debarmentResult.status === 'INACTIVE' || declaredDebarred) {
+    const evidence = declaredDebarred
+      ? `Declaration in "${blacklistingDoc?.fileName}" indicates the bidder is currently debarred/blacklisted.`
+      : `Debarment registry [SANDBOX]: ${debarmentResult.message}`;
+    matrix.push({
+      id: 'req-dec-01',
+      requirementTitle: 'Non-Blacklisting / Debarment Status',
+      category: 'Declarations',
+      tenderClauseReference: 'Annexure-B • Debarment Declaration',
+      requiredCriteria: 'Bidder must not be debarred or blacklisted by any PSU or Government Department.',
+      bidderEvidence: evidence,
+      status: 'FAIL',
+      confidence: 99,
+      riskLevel: 'CRITICAL',
+      sourceDocument: blacklistingDoc?.fileName || 'Debarment Registry',
+      sourcePage: 1,
+      failureReason: 'Bidder is debarred; ineligible for award under GFR 2017 Rule 151.',
+      remediationAction: 'Procurement officer to confirm debarment order and record disqualification reasons.',
+      isMandatory: true,
+    });
+    criticalFindings.push({
+      id: 'crit-debarred',
+      title: 'Bidder Flagged as Debarred / Blacklisted',
+      required: 'No active debarment',
+      evidence,
+      source: blacklistingDoc?.fileName || 'Debarment Registry',
+      status: 'FAIL',
+      remediation: 'Disqualification recommended; final decision rests with the Procurement Officer.',
+    });
+  } else if (blacklistingDoc) {
     matrix.push({
       id: 'req-dec-01',
       requirementTitle: 'Non-Blacklisting / Debarment Undertaking',
       category: 'Declarations',
       tenderClauseReference: 'Annexure-B • Debarment Declaration',
       requiredCriteria: 'Self-declaration on company letterhead confirming bidder has not been debarred or blacklisted by any PSU or Government Department.',
-      bidderEvidence: 'Duly signed & stamped non-blacklisting undertaking on company letterhead verified.',
+      bidderEvidence: 'Non-blacklisting undertaking submitted; no match on the debarment registry [SANDBOX].',
       status: 'PASS',
       confidence: 97,
       riskLevel: 'LOW',
@@ -437,35 +614,47 @@ export function runBidComplianceEvaluation(
   // Check 4B: Local Content / Make in India Declaration
   if (localContentDoc) {
     const facts = localContentDoc.extractedFacts as { localContentPercentage?: number } | undefined;
-    const localContent = typeof facts?.localContentPercentage === 'number' ? facts.localContentPercentage : 62.5;
-    const isPass = localContent >= 50.0;
-    matrix.push({
-      id: 'req-dec-02',
-      requirementTitle: 'Local Content (Make in India) Declaration',
-      category: 'Declarations',
-      tenderClauseReference: 'Public Procurement Order (MII Clause)',
-      requiredCriteria: 'Self-certification indicating percentage of local content (minimum 50% for Class-I Local Supplier status).',
-      bidderEvidence: `Declared local content: ${localContent.toFixed(1)}% (${isPass ? 'Class-I Local Supplier status confirmed' : 'Fails 50% minimum Class-I threshold'}).`,
-      status: isPass ? 'PASS' : 'FAIL',
-      confidence: 96,
-      riskLevel: isPass ? 'LOW' : 'HIGH',
-      sourceDocument: localContentDoc.fileName,
-      sourcePage: 1,
-      isMandatory: true,
-      failureReason: !isPass ? `Local content of ${localContent.toFixed(1)}% is below mandatory 50% threshold.` : undefined,
-      remediationAction: !isPass ? 'Submit revised declaration with qualifying domestic value addition.' : undefined,
-    });
-    if (!isPass) {
-      criticalFindings.push({
-        id: 'crit-local-content-fail',
-        title: 'Local Content Below Class-I Threshold',
-        required: 'Minimum 50% domestic local content',
-        evidence: `${localContent.toFixed(1)}% declared`,
-        source: localContentDoc.fileName,
-        page: 1,
-        status: 'FAIL',
-        remediation: 'Provide audited cost accountant local value addition certificate.',
+    const localContent = facts?.localContentPercentage;
+    if (typeof localContent !== 'number') {
+      matrix.push(unextractedRow(
+        'req-dec-02',
+        'Local Content (Make in India) Declaration',
+        'Declarations',
+        'Public Procurement Order (MII Clause)',
+        'Self-certification indicating percentage of local content (minimum 50% for Class-I Local Supplier status).',
+        localContentDoc.fileName,
+        'Local content percentage'
+      ));
+    } else {
+      const isPass = localContent >= 50.0;
+      matrix.push({
+        id: 'req-dec-02',
+        requirementTitle: 'Local Content (Make in India) Declaration',
+        category: 'Declarations',
+        tenderClauseReference: 'Public Procurement Order (MII Clause)',
+        requiredCriteria: 'Self-certification indicating percentage of local content (minimum 50% for Class-I Local Supplier status).',
+        bidderEvidence: `Declared local content: ${localContent.toFixed(1)}% (${isPass ? 'Class-I Local Supplier status confirmed' : 'Fails 50% minimum Class-I threshold'}).`,
+        status: isPass ? 'PASS' : 'FAIL',
+        confidence: 96,
+        riskLevel: isPass ? 'LOW' : 'HIGH',
+        sourceDocument: localContentDoc.fileName,
+        sourcePage: 1,
+        isMandatory: true,
+        failureReason: !isPass ? `Local content of ${localContent.toFixed(1)}% is below mandatory 50% threshold.` : undefined,
+        remediationAction: !isPass ? 'Submit revised declaration with qualifying domestic value addition.' : undefined,
       });
+      if (!isPass) {
+        criticalFindings.push({
+          id: 'crit-local-content-fail',
+          title: 'Local Content Below Class-I Threshold',
+          required: 'Minimum 50% domestic local content',
+          evidence: `${localContent.toFixed(1)}% declared`,
+          source: localContentDoc.fileName,
+          page: 1,
+          status: 'FAIL',
+          remediation: 'Provide audited cost accountant local value addition certificate.',
+        });
+      }
     }
   } else {
     matrix.push({
@@ -493,14 +682,15 @@ export function runBidComplianceEvaluation(
     const udyamNumber = (udyamFacts?.udyamNumber as string) || bidderProfile.udyamNumber;
 
     if (isUdyam && udyamDoc && udyamNumber) {
-      // Obtain government verification result (already extracted on upload, or run on demand)
-      let govtVerif = udyamFacts?.governmentVerification as GovernmentRecordComparisonResult | undefined;
-      if (!govtVerif) {
+      // Re-run registry verification with the full bid context. The result cached at upload time
+      // only saw the Udyam certificate itself, so it could not use the PAN from the PAN card.
+      let govtVerif: GovernmentRecordComparisonResult | undefined;
+      {
         const udyamProvider = new UdyamProvider();
         const verifRes = udyamProvider.verify({
           companyName: (udyamFacts?.enterpriseName as string) || bidderProfile.companyName,
           udyamNumber,
-          pan: (udyamFacts?.pan as string) || bidderProfile.pan,
+          pan: (udyamFacts?.pan as string) || (panDoc?.extractedFacts as { pan?: string } | undefined)?.pan || bidderProfile.pan,
           documentsSubmitted: [
             {
               documentId: udyamDoc.id,
@@ -832,11 +1022,12 @@ export function runBidComplianceEvaluation(
 
 export function getDemoBidderProfile(): BidderProfile {
   return {
-    companyName: 'Apex Industrial Solutions Pvt Ltd',
+    // Must match the sandbox GST / Udyam registry records for GSTIN 33AABCA1234F1Z8.
+    companyName: 'Apex Heavy Engineering Pvt Ltd',
     registrationNumber: 'U29253TN2018PTC123456',
     gstin: '33AABCA1234F1Z8',
     pan: 'AABCA1234F',
-    udyamNumber: 'UDYAM-TN-02-0048192',
+    udyamNumber: 'UDYAM-TN-02-0049182',
     entityType: 'Private Limited',
     registeredAddress: 'Plot 44, SIDCO Industrial Estate, Ambattur, Chennai, Tamil Nadu - 600058',
     contactPerson: 'Suresh Narayanan, Director of Contracts',
@@ -882,6 +1073,7 @@ export function getDemoFlawedDocuments(): BidUploadedDocument[] {
       extractedFacts: {
         turnover: 8.72, // Below ₹10.00 Cr
         declaredTurnover: 12.4, // Causes contradiction
+        netWorth: 4.2,
       },
     },
     {
@@ -905,6 +1097,7 @@ export function getDemoFlawedDocuments(): BidUploadedDocument[] {
       fileSizeBytes: 2100000,
       status: 'processed',
       uploadedAt: new Date().toISOString(),
+      extractedFacts: { isCompliant: true, deviationsCount: 0 },
     },
     {
       id: 'doc-emd-01',
@@ -956,6 +1149,7 @@ export function getDemoPassingDocuments(): BidUploadedDocument[] {
       extractedFacts: {
         turnover: 14.8, // Exceeds required ₹10.00 Cr
         declaredTurnover: 14.8, // Consistent
+        netWorth: 4.2,
       },
     },
     {
@@ -979,6 +1173,7 @@ export function getDemoPassingDocuments(): BidUploadedDocument[] {
       fileSizeBytes: 750000,
       status: 'processed',
       uploadedAt: new Date().toISOString(),
+      extractedFacts: { isNonDebarred: true },
     },
     {
       id: 'doc-mii-01',
@@ -988,6 +1183,7 @@ export function getDemoPassingDocuments(): BidUploadedDocument[] {
       fileSizeBytes: 820000,
       status: 'processed',
       uploadedAt: new Date().toISOString(),
+      extractedFacts: { localContentPercentage: 62.5 },
     },
     {
       id: 'doc-tech-01',
@@ -997,6 +1193,7 @@ export function getDemoPassingDocuments(): BidUploadedDocument[] {
       fileSizeBytes: 2100000,
       status: 'processed',
       uploadedAt: new Date().toISOString(),
+      extractedFacts: { isCompliant: true, deviationsCount: 0 },
     },
     {
       id: 'doc-emd-01',

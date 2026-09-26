@@ -138,6 +138,8 @@ export interface CrossDocumentFinding {
 export interface BidderEvaluationDossier {
   bidId: string;
   submissionId: string;
+  /** Supabase user id of the submitting bidder; absent for seeded demo dossiers. */
+  ownerUserId?: string;
   tenderId: string;
   tenderReference: string;
   tenderTitle: string;

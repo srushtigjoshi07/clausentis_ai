@@ -71,7 +71,7 @@ What aspect of the **CPCL Gas Compressor tender** would you like to examine?`,
     setLoading(true);
     try {
       const history = messages.map((m) => ({ role: m.role, content: m.content }));
-      const response = await askClausentisAssistant('tender_authority', text, history, {
+      const response = await askClausentisAssistant(text, history, {
         tenderId: 'tender-cpcl-2026-0412',
         tenderTitle: 'Supply, Installation and Commissioning of High-Pressure Gas Compressor System',
         pageContext: 'Authority Evaluation Console - Clause Compliance Matrix'
