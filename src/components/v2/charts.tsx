@@ -262,7 +262,6 @@ const CELL_CLASS: Record<Outcome, string> = {
 };
 
 export function ClauseHeatmap({ columns, rows, caption }: { columns: HeatmapColumn[]; rows: HeatmapRow[]; caption: string }) {
-  const grid = { gridTemplateColumns: `minmax(180px, 250px) repeat(${columns.length}, minmax(130px, 1fr))` };
   return (
     <div className="flex flex-col gap-3">
       <Legend items={STATUS_LEGEND} />

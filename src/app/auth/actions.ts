@@ -158,10 +158,12 @@ export async function signup(formData: FormData): Promise<AuthActionResult | voi
   const email = (formData.get('email') as string)?.trim() || '';
   const password = (formData.get('password') as string) || '';
   const confirmPassword = (formData.get('confirm_password') as string) || '';
-  const fullName = (formData.get('full_name') as string)?.trim() || 'Procurement Specialist';
-  const role = (formData.get('role') as UserRole) || 'bidder';
-  const organisationName = (formData.get('organisation_name') as string)?.trim() ||
-    (role === 'tender_authority' ? 'Government Procurement Department' : 'Vendor Enterprise');
+  const fullName = (formData.get('full_name') as string)?.trim() || 'Bidder';
+  // Self-registration is for bidders only. Officer (tender_authority) accounts are
+  // provisioned by an administrator in profiles.role; a posted "role" is ignored.
+  const role: UserRole = 'bidder';
+  const organisationName = (formData.get('organisation_name') as string)?.trim() || 'Vendor Enterprise';
+  const gstin = ((formData.get('gstin') as string) || '').trim().toUpperCase();
 
   // 1. Client & Server Validations
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -219,6 +221,7 @@ export async function signup(formData: FormData): Promise<AuthActionResult | voi
           role,
           organisation_name: organisationName,
           company_name: organisationName,
+          ...(gstin ? { gstin } : {}),
         },
         emailRedirectTo,
       },
@@ -270,12 +273,7 @@ export async function signup(formData: FormData): Promise<AuthActionResult | voi
       }
 
       revalidatePath('/', 'layout');
-
-      if (role === 'tender_authority') {
-        redirect('/authority/dashboard');
-      } else {
-        redirect('/bidder/dashboard');
-      }
+      redirect('/bidder/dashboard');
     }
 
     return {
@@ -340,6 +338,25 @@ export async function getUserProfile(): Promise<UserProfile | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Sends a password-reset email. Always answers with the same message so the form
+ * cannot be used to discover which emails have accounts.
+ */
+export async function requestPasswordReset(formData: FormData): Promise<AuthActionResult> {
+  const email = ((formData.get('email') as string) || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: 'Please enter a valid email address.', errorCode: 'INVALID_EMAIL' };
+  }
+  try {
+    const supabase = await createClient();
+    const siteUrl = await getSiteUrl();
+    await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${siteUrl}/auth/callback` });
+  } catch (err) {
+    console.warn('Password reset request notice:', err);
+  }
+  return { success: true, message: 'If an account exists for that email, a reset link is on its way.' };
 }
 
 export async function logout() {

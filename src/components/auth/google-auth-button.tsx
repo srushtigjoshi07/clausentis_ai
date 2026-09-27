@@ -35,14 +35,15 @@ export function GoogleAuthButton() {
     <div className="grid gap-2">
       <button 
         type="button" 
-        className="w-full h-10 px-4 rounded-md bg-white hover:bg-[#F5F5F5] text-[#111111] font-semibold text-sm border border-[#E5E5E5] shadow-sm transition-colors flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="btn btn-secondary w-full"
+        style={{ minHeight: 46 }}
         onClick={handleGoogleLogin}
         disabled={isLoading}
       >
         {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin text-[#111111]" />
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
         ) : (
-          <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
+          <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
             <path
               fill="#4285F4"
               d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
@@ -61,10 +62,10 @@ export function GoogleAuthButton() {
             />
           </svg>
         )}
-        <span className="text-[#111111] font-semibold text-sm">Google</span>
+        <span>Continue with Google</span>
       </button>
       {error && (
-        <p className="text-xs text-[#555555] text-center">
+        <p role="alert" className="text-center text-xs text-fg-2">
           OAuth config required: {error}
         </p>
       )}
