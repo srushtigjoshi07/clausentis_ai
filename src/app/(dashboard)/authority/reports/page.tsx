@@ -1,133 +1,116 @@
-import React from 'react';
-import Link from 'next/link';
-import { 
-  BarChart3, 
-  FileText, 
-  Download, 
-  ArrowLeft, 
-  ShieldCheck, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Clock, 
-  Layers
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { getAllStructuredReports } from '@/lib/actions/reports';
+import { getAllStructuredReports, type StructuredReportItem } from '@/lib/actions/reports';
+import { getAllBidderDossiers } from '@/lib/compliance/repository';
 import { ExportAuditPdfButton } from '@/components/audit/ExportAuditPdfButton';
-import { MatchedRequirementsPdfButton } from '@/components/reports/MatchedRequirementsPdfButton';
+import { EmptyState, Legend, PageBody, PageHeader } from '@/components/v2/ui';
 
-export const metadata = {
-  title: 'Statutory Reports | Authority Portal',
-  description: 'Comprehensive compliance and evaluation reports generated from verified procurement evidence.',
+export const metadata = { title: 'Reports · Clausentis officer portal' };
+export const dynamic = 'force-dynamic';
+
+const PLAIN_TITLES: Record<StructuredReportItem['type'], string> = {
+  TENDER_COMPLIANCE_SUMMARY: 'Tender compliance summary',
+  BID_COMPARISON: 'Bid comparison matrix',
+  BIDDER_RISK: 'Risk & discrepancy assessment',
+  REQUIREMENT_WISE_COMPLIANCE: 'Requirement-wise compliance matrix',
+  STATUTORY_VERIFICATION: 'Portal verification report',
+  DOCUMENT_VERIFICATION: 'Document & evidence integrity',
+  EVALUATION_SUMMARY: 'Evaluation committee summary',
+  AUDIT_REPORT: 'Audit ledger',
 };
 
-export default async function AuthorityReportsPage() {
-  const reports = await getAllStructuredReports('tender-cpcl-2026-0412');
+/** Report types the server PDF route renders as the multi-bidder matrix for a tender. */
+const MATRIX_TYPES = new Set<StructuredReportItem['type']>(['TENDER_COMPLIANCE_SUMMARY', 'BID_COMPARISON', 'REQUIREMENT_WISE_COMPLIANCE']);
+
+export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ tenderId?: string }> }) {
+  const { tenderId: requested } = await searchParams;
+  const all = getAllBidderDossiers();
+  const tenders = Array.from(new Map(all.map((d) => [d.tenderId, d.tenderReference])).entries());
+  const tenderId = requested && tenders.some(([id]) => id === requested) ? requested : tenders[0]?.[0];
+  const dossiers = all.filter((d) => d.tenderId === tenderId);
+  const reports = tenderId ? await getAllStructuredReports(tenderId) : [];
+  const ref = dossiers[0]?.tenderReference ?? '';
+  const title = dossiers[0]?.tenderTitle ?? '';
+  const mandatoryTotal = Math.max(0, ...dossiers.map((d) => d.mandatoryTotal));
 
   return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-16 font-sans bg-white">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E5E5E5] pb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#111111] bg-[#F7F7F7] px-2 py-0.5 rounded border border-[#E5E5E5]">
-              CVC Defensible Intelligence
+    <PageBody>
+      <PageHeader
+        eyebrow="Reports"
+        title="Committee-ready exports"
+        actions={
+          tenders.length > 0 ? (
+            <form method="get" className="flex items-center gap-2">
+              <label htmlFor="r-tender" className="sr-only-v2">Tender</label>
+              <select id="r-tender" name="tenderId" defaultValue={tenderId} className="input w-[260px]">
+                {tenders.map(([id, r]) => (
+                  <option key={id} value={id}>{r}</option>
+                ))}
+              </select>
+              <button type="submit" className="btn btn-secondary">Show</button>
+            </form>
+          ) : null
+        }
+      />
+
+      {!tenderId || reports.length === 0 ? (
+        <EmptyState title="No reports yet">Reports are generated once a tender has evaluated bids.</EmptyState>
+      ) : (
+        <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <section aria-label="Report types" className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {reports.map((r, i) => (
+              <article key={r.id} className="card flex flex-col gap-2.5 p-4">
+                <span className="flex items-center justify-between">
+                  <span className="mono text-[11px] text-fg-3">R{i + 1} · {r.recordCount} record{r.recordCount === 1 ? '' : 's'}</span>
+                  <span className="pill pill-neutral">PDF</span>
+                </span>
+                <h2 className="m-0 text-sm font-semibold">{PLAIN_TITLES[r.type] ?? r.title}</h2>
+                <p className="m-0 text-xs leading-relaxed text-fg-2">{r.description}</p>
+                <span className="text-[11px] text-fg-3">Generated {r.generatedAt}</span>
+                <span className="mt-auto flex flex-wrap gap-2">
+                  {MATRIX_TYPES.has(r.type) ? (
+                    <a href={`/api/pdf/download?type=matched-requirements&tenderId=${encodeURIComponent(tenderId)}`} className="btn btn-primary btn-sm" download>
+                      Download PDF
+                    </a>
+                  ) : (
+                    <ExportAuditPdfButton
+                      tenderId={tenderId}
+                      tenderRef={ref}
+                      tenderTitle={title}
+                      label={r.type === 'AUDIT_REPORT' ? 'Download PDF' : 'Download as audit PDF'}
+                      variant="default"
+                    />
+                  )}
+                </span>
+              </article>
+            ))}
+          </section>
+
+          <aside className="card flex flex-col gap-3.5 p-[18px]" aria-label="Mandatory clauses met per bid">
+            <span className="eyebrow">Preview · Tender compliance summary</span>
+            <h2 className="h2">Mandatory clauses met, per bid</h2>
+            <ul className="m-0 flex list-none flex-col gap-3.5 p-0">
+              {dossiers.map((d) => {
+                const gap = Math.max(0, d.mandatoryTotal - d.mandatoryPassed);
+                return (
+                  <li key={d.bidId} className="flex flex-col gap-1.5">
+                    <span className="flex justify-between text-xs">
+                      <span className="font-semibold">{d.shortName || d.bidderName}</span>
+                      <span className="mono">{d.mandatoryPassed} / {d.mandatoryTotal}</span>
+                    </span>
+                    <span className="flex h-3 gap-0.5" role="img" aria-label={`${d.bidderName}: ${d.mandatoryPassed} of ${d.mandatoryTotal} mandatory clauses met`}>
+                      {d.mandatoryPassed > 0 ? <span className="block h-3 bg-mark" title={`${d.mandatoryPassed} met`} style={{ flex: `${d.mandatoryPassed} 1 0` }} /> : null}
+                      {gap > 0 ? <span className="block h-3 rounded-r bg-line" title={`${gap} not met`} style={{ flex: `${gap} 1 0` }} /> : null}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            <Legend items={[{ label: 'Met', swatch: 'ink' }, { label: 'Not met', swatch: 'track' }]} />
+            <span className="border-t border-line-3 pt-3 text-xs text-fg-2">
+              {mandatoryTotal} mandatory clauses per bid. Every report carries source citations and the decision hash; AI recommendations are marked advisory.
             </span>
-            <span className="text-[#777777] text-xs">•</span>
-            <span className="text-xs text-[#555555] font-mono">CPCL/ENG/2026/HPGC-0412</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#111111] mt-1">
-            Procurement Compliance &amp; Evaluation Reports
-          </h1>
-          <p className="text-xs sm:text-sm text-[#555555] mt-0.5">
-            Audit-grade dossiers generated directly from deterministic compliance evaluations, statutory provider checks, and evidence citations.
-          </p>
+          </aside>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <MatchedRequirementsPdfButton
-            tenderId="tender-cpcl-2026-0412"
-            label="Matched Requirements PDF"
-            showSaveButton={true}
-          />
-          <ExportAuditPdfButton
-            tenderTitle="Supply, Installation and Commissioning of High-Pressure Gas Compressor System"
-            tenderRef="CPCL/ENG/2026/HPGC-0412"
-            tenderId="tender-cpcl-2026-0412"
-            label="Export Full Audit PDF"
-          />
-        </div>
-      </div>
-
-      {/* Reports Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {reports.map((report, idx) => (
-          <div
-            key={report.id}
-            className="p-5 rounded-lg border border-[#E5E5E5] bg-white hover:border-[#CCCCCC] transition-all space-y-4 shadow-xs"
-          >
-            <div className="flex items-start justify-between gap-3 border-b border-[#E5E5E5] pb-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#F7F7F7] border border-[#E5E5E5] text-[#111111] font-semibold">
-                    Report #{idx + 1}
-                  </span>
-                  <span className="text-[11px] font-mono text-[#777777]">
-                    {report.recordCount} Records Analyzed
-                  </span>
-                </div>
-                <h3 className="text-base font-semibold text-[#111111]">
-                  {report.title}
-                </h3>
-              </div>
-
-              <span className="w-2 h-2 rounded-full bg-[#111111] shrink-0 mt-1" />
-            </div>
-
-            <p className="text-xs text-[#555555] leading-relaxed">
-              {report.description}
-            </p>
-
-            {/* Structured Report Preview */}
-            <div className="p-3 rounded-md bg-[#FAFAFA] border border-[#E5E5E5] text-xs font-mono space-y-1 text-[#333333]">
-              <div className="flex items-center justify-between text-[11px] text-[#777777]">
-                <span>Generated: {report.generatedAt}</span>
-                <span className="uppercase">{report.type.replace(/_/g, ' ')}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-[11px] text-[#555555] font-mono">
-                Status: Complete &amp; Grounded
-              </span>
-              <div className="flex items-center gap-2">
-                {report.type === 'REQUIREMENT_WISE_COMPLIANCE' ? (
-                  <MatchedRequirementsPdfButton
-                    tenderId="tender-cpcl-2026-0412"
-                    label="Download Matrix PDF"
-                    documentType="matched-requirements"
-                    showSaveButton={true}
-                  />
-                ) : report.type === 'TENDER_COMPLIANCE_SUMMARY' ? (
-                  <MatchedRequirementsPdfButton
-                    tenderId="tender-cpcl-2026-0412"
-                    label="Download Compliance Report PDF"
-                    documentType="compliance-report"
-                    showSaveButton={true}
-                  />
-                ) : (
-                  <ExportAuditPdfButton
-                    tenderTitle="Supply, Installation and Commissioning of High-Pressure Gas Compressor System"
-                    tenderRef="CPCL/ENG/2026/HPGC-0412"
-                    tenderId="tender-cpcl-2026-0412"
-                    label="Download Audit PDF"
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+      )}
+    </PageBody>
   );
 }

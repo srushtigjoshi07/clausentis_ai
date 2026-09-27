@@ -1,326 +1,279 @@
 'use client';
 
-import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { 
-  Building2, 
-  UploadCloud, 
-  FileText, 
-  CheckCircle2, 
-  RefreshCw, 
-  ArrowLeft,
-  Calendar
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useMemo, useState, type FormEvent } from 'react';
+import { Check, Loader2 } from 'lucide-react';
 import { createAuthorityTenderAction } from '@/lib/actions/tenders';
+import { CategoryChip, PageBody, PageHeader, cx } from '@/components/v2/ui';
+import { categoryClass } from '@/components/v2/status';
 
-export default function AuthorityCreateTenderPage() {
+type Category = 'Financial' | 'Experience' | 'Statutory' | 'Technical' | 'Legal' | 'Quality';
+
+interface ClausePreview {
+  clause: string;
+  title: string;
+  category: Category;
+  rule: string;
+  evidence: string;
+  mandatory: boolean;
+}
+
+const CAT_FILL: Record<Category, string> = {
+  Financial: '#1E40AF',
+  Experience: '#C2410C',
+  Statutory: '#6D28D9',
+  Technical: '#0E7490',
+  Legal: '#BE185D',
+  Quality: '#4338CA',
+};
+
+/**
+ * The bid compliance engine (lib/tender-discovery/bid-compliance-verifier) applies the same
+ * rule set to every tender; the thresholds below are what the officer enters here.
+ */
+function buildClauses(f: { minTurnover: string; minExperience: string; localContent: string }): ClausePreview[] {
+  const t = f.minTurnover.trim();
+  const e = f.minExperience.trim();
+  const l = f.localContent.trim();
+  return [
+    { clause: 'NIT 3.1', title: t ? `Average annual turnover ≥ ₹${t} Cr` : 'Average annual turnover (enter a minimum)', category: 'Financial', rule: 'MINIMUM_VALUE', evidence: 'Audited financial statements', mandatory: true },
+    { clause: 'NIT 3.3', title: 'Positive net worth', category: 'Financial', rule: 'MINIMUM_VALUE', evidence: 'Audited balance sheet', mandatory: true },
+    { clause: 'BQC 4.1', title: e ? `Similar experience ≥ ${e} years` : 'Similar experience (enter a minimum)', category: 'Experience', rule: 'YEARS_EXPERIENCE', evidence: 'Work orders / completion certificates', mandatory: true },
+    { clause: 'BQC 4.2', title: 'Completed similar work orders', category: 'Experience', rule: 'COUNT_THRESHOLD', evidence: 'Completion certificates', mandatory: true },
+    { clause: 'Tech 2', title: 'Technical specification conformance', category: 'Technical', rule: 'DOCUMENT_REQUIRED', evidence: 'Technical datasheet', mandatory: true },
+    { clause: 'Tech OEM', title: 'OEM manufacturer authorization', category: 'Technical', rule: 'DOCUMENT_REQUIRED', evidence: 'Manufacturer authorization form', mandatory: true },
+    { clause: 'NIT 2.1', title: 'GST registration and return filing', category: 'Statutory', rule: 'DOCUMENT_REQUIRED', evidence: 'GST REG-06', mandatory: true },
+    { clause: 'NIT 2.2', title: 'Permanent Account Number (PAN)', category: 'Statutory', rule: 'DOCUMENT_REQUIRED', evidence: 'PAN card', mandatory: true },
+    { clause: 'MII', title: l ? `Local content ≥ ${l}% (Make in India)` : 'Local content declaration', category: 'Statutory', rule: 'PERCENTAGE_THRESHOLD', evidence: 'Local content declaration', mandatory: false },
+    { clause: 'Annex B', title: 'Non-blacklisting / debarment undertaking', category: 'Legal', rule: 'DOCUMENT_REQUIRED', evidence: 'Notarised affidavit', mandatory: true },
+  ];
+}
+
+const inputs = [
+  { id: 'title', label: 'Tender title', span: true, required: true },
+  { id: 'reference', label: 'Reference number', mono: true, required: true },
+  { id: 'category', label: 'Category', select: ['Goods', 'Services', 'Works', 'Consultancy', 'Turnkey / EPC', 'Maintenance'] },
+  { id: 'estimatedValue', label: 'Estimated value (e.g. ₹14.50 Crore)', required: true },
+  { id: 'emd', label: 'EMD amount' },
+  { id: 'publishedDate', label: 'Published on', type: 'date', required: true },
+  { id: 'closingDate', label: 'Closing date', type: 'date', required: true },
+  { id: 'validity', label: 'Bid validity (days)', type: 'number' },
+  { id: 'minTurnover', label: 'Minimum average turnover (₹ Cr)', type: 'number', mono: true, required: true },
+  { id: 'minExperience', label: 'Minimum experience (years)', type: 'number', mono: true, required: true },
+  { id: 'localContent', label: 'Minimum local content (%)', type: 'number', mono: true },
+] as const;
+
+type FormKey = (typeof inputs)[number]['id'] | 'description';
+
+export default function PublishTenderPage() {
   const router = useRouter();
+  const [form, setForm] = useState<Record<FormKey, string>>({
+    title: '',
+    reference: '',
+    category: 'Goods',
+    estimatedValue: '',
+    emd: '',
+    publishedDate: new Date().toISOString().slice(0, 10),
+    closingDate: '',
+    validity: '180',
+    minTurnover: '',
+    minExperience: '',
+    localContent: '50',
+    description: '',
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Form State
-  const [title, setTitle] = useState('Supply, Installation and Commissioning of Skid-Mounted Cryogenic Nitrogen Pumping Packages');
-  const [reference, setReference] = useState('CPCL/ENG/2026/N2-0819');
-  const [category, setCategory] = useState('Goods');
-  const [description, setDescription] = useState('Turnkey engineering, manufacture, shop testing, delivery, site erection and commissioning of automated cryogenic liquid nitrogen storage and high-pressure pumping units with SIL-3 instrumentation.');
-  const [publishedDate, setPublishedDate] = useState('2026-09-09');
-  const [closingDate, setClosingDate] = useState('2026-10-15');
-  const [emd, setEmd] = useState('₹22,00,000 (Exempted for registered MSEs)');
-  const [estimatedValue, setEstimatedValue] = useState('₹11.20 Crore');
-  const [validity, setValidity] = useState('180');
-  const [minTurnover, setMinTurnover] = useState('8.50');
-  const [minExperience, setMinExperience] = useState('5');
-  const [localContent, setLocalContent] = useState('50');
+  const clauses = useMemo(() => buildClauses(form), [form]);
+  const cats = useMemo(() => {
+    const counts = new Map<Category, number>();
+    clauses.forEach((c) => counts.set(c.category, (counts.get(c.category) ?? 0) + 1));
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+  }, [clauses]);
+  const maxCat = Math.max(...cats.map(([, n]) => n), 1);
+  const detailsDone = Boolean(form.title && form.reference && form.closingDate && form.minTurnover && form.minExperience && form.estimatedValue);
 
-  // File Upload State
-  const [files, setFiles] = useState<{ name: string; size: string; type: string }[]>([
-    { name: 'Notice_Inviting_Tender_NIT_N2_0819.pdf', size: '2.40 MB', type: 'NIT' },
-    { name: 'Technical_Specifications_Cryogenic_Pumps.pdf', size: '5.80 MB', type: 'Specs' },
-    { name: 'Schedule_of_Quantities_BOQ.xlsx', size: '1.10 MB', type: 'BOQ' },
-  ]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [extractedCount, setExtractedCount] = useState<number | null>(null);
+  const set = (k: FormKey) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const handleCreate = async (e: React.FormEvent) => {
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setIsProcessing(true);
-
+    setError(null);
+    setSubmitting(true);
     try {
       const res = await createAuthorityTenderAction({
-        title,
-        reference,
-        category,
-        description,
-        publishedDate,
-        closingDate,
-        emd,
-        estimatedValue,
-        validity,
-        minTurnover,
-        minExperience,
-        localContent,
+        title: form.title,
+        reference: form.reference,
+        category: form.category,
+        description: form.description,
+        publishedDate: form.publishedDate,
+        closingDate: form.closingDate,
+        emd: form.emd,
+        estimatedValue: form.estimatedValue,
+        validity: form.validity,
+        minTurnover: form.minTurnover,
+        minExperience: form.minExperience,
+        localContent: form.localContent,
       });
-
-      if (res.success) {
-        setExtractedCount(res.extractedCount || 14);
-        setTimeout(() => {
-          setIsProcessing(false);
-          router.push('/authority/tenders');
-        }, 1200);
-      } else {
-        console.error('[CreateTender] Error:', res.error);
-        setIsProcessing(false);
+      if (res.success && res.tenderId) {
+        router.push(`/authority/tenders/${res.tenderId}`);
+        return;
       }
-    } catch (err) {
-      console.error('[CreateTender] Unexpected error:', err);
-      setIsProcessing(false);
+      setError(res.error || 'The tender could not be published.');
+    } catch {
+      setError('The tender could not be published. Please try again.');
     }
-  };
+    setSubmitting(false);
+  }
+
+  const steps = [
+    { n: 1, t: 'Enter tender details', d: detailsDone ? 'Required fields complete' : 'Title, reference, dates and thresholds', done: detailsDone, current: !detailsDone },
+    { n: 2, t: 'Confirm the checks', d: `${clauses.length} checks will run on every bid`, done: false, current: detailsDone },
+    { n: 3, t: 'Publish & open for bids', d: 'Bidders can start checking', done: false, current: false },
+  ];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 pb-16 font-sans bg-white">
-      <div>
-        <Link 
-          href="/authority/tenders" 
-          className="inline-flex items-center text-xs text-[#555555] hover:text-[#111111] mb-3 transition-colors font-mono"
-        >
-          <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
-          Back to Managed Tenders
-        </Link>
+    <PageBody>
+      <PageHeader back={{ href: '/authority/tenders', label: 'Tenders' }} title="Publish a tender" />
 
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#111111] bg-[#F7F7F7] px-2 py-0.5 rounded border border-[#E5E5E5]">
-            Tender Authoring Pipeline
-          </span>
-          <span className="text-[#777777] text-xs">•</span>
-          <span className="text-xs text-[#555555] font-mono">Government Procurement Notice</span>
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-semibold text-[#111111] tracking-tight mt-1">
-          Create & Publish New Tender
-        </h1>
-        <p className="text-xs sm:text-sm text-[#555555] mt-0.5">
-          Provide tender statutory terms and upload official tender documents. Our system will automatically extract structured requirements and qualification criteria.
-        </p>
-      </div>
-
-      <form onSubmit={handleCreate} className="space-y-6">
-        {/* Section 1: Basic Information */}
-        <div className="p-6 rounded-lg border border-[#E5E5E5] bg-white shadow-sm space-y-4">
-          <h2 className="text-sm font-semibold text-[#111111] flex items-center gap-2 border-b border-[#E5E5E5] pb-3">
-            <Building2 className="w-4 h-4 text-[#111111]" />
-            1. Statutory Notice & Tender Information
-          </h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2 space-y-1.5">
-              <label className="text-xs font-medium text-[#111111]">Tender Title</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-                className="w-full h-9 px-3 rounded-md bg-white border border-[#E5E5E5] text-xs text-[#111111] focus:outline-none focus:border-[#111111]"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#111111]">Tender Reference Number</label>
-              <input
-                type="text"
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                required
-                className="w-full h-9 px-3 rounded-md bg-white border border-[#E5E5E5] text-xs text-[#111111] font-mono focus:outline-none focus:border-[#111111]"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#111111]">Procurement Category</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full h-9 px-3 rounded-md bg-white border border-[#E5E5E5] text-xs text-[#111111] focus:outline-none focus:border-[#111111] cursor-pointer"
-              >
-                <option value="Goods">Goods & Equipment</option>
-                <option value="Works">Works / Turnkey EPC</option>
-                <option value="Services">Services & Maintenance</option>
-                <option value="Consultancy">Consultancy</option>
-              </select>
-            </div>
-
-            <div className="sm:col-span-2 space-y-1.5">
-              <label className="text-xs font-medium text-[#111111]">Detailed Work Description</label>
-              <textarea
-                rows={3}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full p-3 rounded-md bg-white border border-[#E5E5E5] text-xs text-[#111111] focus:outline-none focus:border-[#111111] resize-none leading-relaxed"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Section 2: Commercial & Timeline Criteria */}
-        <div className="p-6 rounded-lg border border-[#E5E5E5] bg-white shadow-sm space-y-4">
-          <h2 className="text-sm font-semibold text-[#111111] flex items-center gap-2 border-b border-[#E5E5E5] pb-3">
-            <Calendar className="w-4 h-4 text-[#111111]" />
-            2. Key Commercial Deadlines & Financial Thresholds
-          </h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#111111]">Publication Date</label>
-              <input
-                type="date"
-                value={publishedDate}
-                onChange={(e) => setPublishedDate(e.target.value)}
-                className="w-full h-9 px-3 rounded-md bg-white border border-[#E5E5E5] text-xs text-[#111111] font-mono"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#111111]">Bid Closing Date</label>
-              <input
-                type="date"
-                value={closingDate}
-                onChange={(e) => setClosingDate(e.target.value)}
-                className="w-full h-9 px-3 rounded-md bg-white border border-[#E5E5E5] text-xs text-[#111111] font-mono"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#111111]">Bid Validity (Days)</label>
-              <input
-                type="number"
-                value={validity}
-                onChange={(e) => setValidity(e.target.value)}
-                className="w-full h-9 px-3 rounded-md bg-white border border-[#E5E5E5] text-xs text-[#111111] font-mono"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#111111]">Estimated Tender Value</label>
-              <input
-                type="text"
-                value={estimatedValue}
-                onChange={(e) => setEstimatedValue(e.target.value)}
-                className="w-full h-9 px-3 rounded-md bg-white border border-[#E5E5E5] text-xs text-[#111111] font-mono"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#111111]">EMD Amount & Exemption</label>
-              <input
-                type="text"
-                value={emd}
-                onChange={(e) => setEmd(e.target.value)}
-                className="w-full h-9 px-3 rounded-md bg-white border border-[#E5E5E5] text-xs text-[#111111] font-mono"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#111111]">Min 3-Yr Turnover Required (₹ Cr)</label>
-              <input
-                type="number"
-                step="0.1"
-                value={minTurnover}
-                onChange={(e) => setMinTurnover(e.target.value)}
-                className="w-full h-9 px-3 rounded-md bg-white border border-[#E5E5E5] text-xs text-[#111111] font-mono"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#111111]">Min Years Experience Required</label>
-              <input
-                type="number"
-                value={minExperience}
-                onChange={(e) => setMinExperience(e.target.value)}
-                className="w-full h-9 px-3 rounded-md bg-white border border-[#E5E5E5] text-xs text-[#111111] font-mono"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#111111]">Min Local Content % (Make in India)</label>
-              <input
-                type="number"
-                value={localContent}
-                onChange={(e) => setLocalContent(e.target.value)}
-                className="w-full h-9 px-3 rounded-md bg-white border border-[#E5E5E5] text-xs text-[#111111] font-mono"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Section 3: Official Document Upload Zone */}
-        <div className="p-6 rounded-lg border border-[#E5E5E5] bg-white shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3">
-            <div>
-              <h2 className="text-sm font-semibold text-[#111111] flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#111111]" />
-                3. Official Tender Documents (NIT / Specifications / BOQ)
-              </h2>
-              <p className="text-xs text-[#555555] mt-0.5">
-                Upload official RFP documents. All clauses and eligibility rules will be structured automatically.
-              </p>
-            </div>
-            <span className="text-[10px] font-mono text-[#111111] bg-[#F7F7F7] px-2.5 py-1 rounded border border-[#E5E5E5]">
-              Clause Extractor Active
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {files.map((file, idx) => (
-              <div key={idx} className="p-3.5 rounded-md bg-[#F7F7F7] border border-[#E5E5E5] flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                  <FileText className="w-4 h-4 text-[#111111] shrink-0" />
-                  <div className="truncate">
-                    <p className="font-medium text-[#111111] truncate">{file.name}</p>
-                    <p className="text-[10px] text-[#777777] font-mono">{file.size} • {file.type}</p>
-                  </div>
-                </div>
-                <CheckCircle2 className="w-4 h-4 text-[#111111] shrink-0" />
-              </div>
-            ))}
-          </div>
-
-          <div className="border-2 border-dashed border-[#E5E5E5] rounded-md p-5 text-center bg-[#F7F7F7] hover:border-[#CCCCCC] transition-colors cursor-pointer">
-            <UploadCloud className="w-6 h-6 text-[#777777] mx-auto mb-1.5" />
-            <p className="text-xs text-[#111111] font-medium">
-              Click to attach additional annexures, technical data sheets, or corrigendum notices
-            </p>
-            <p className="text-[11px] text-[#777777] mt-0.5">PDF, XLSX, DOCX up to 50MB</p>
-          </div>
-        </div>
-
-        {/* Action Button & AI Extraction Feedback */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-          {extractedCount ? (
-            <div className="flex items-center gap-2 text-xs text-[#111111] font-mono">
-              <CheckCircle2 className="w-4 h-4 text-[#111111]" />
-              <span>Extracted {extractedCount} structured clauses & published tender to active portal!</span>
-            </div>
-          ) : (
-            <p className="text-xs text-[#777777]">
-              By clicking Publish, this tender will be registered in the public catalog and made accessible to verified vendors.
-            </p>
-          )}
-
-          <Button
-            type="submit"
-            disabled={isProcessing}
-            className="w-full sm:w-auto h-10 px-6 bg-[#111111] hover:bg-[#222222] text-white font-medium text-xs sm:text-sm tracking-wide gap-2 rounded-md cursor-pointer"
+      <ol aria-label="Steps" className="m-0 grid list-none grid-cols-1 gap-3 p-0 sm:grid-cols-3">
+        {steps.map((s) => (
+          <li
+            key={s.n}
+            aria-current={s.current ? 'step' : undefined}
+            className={cx('flex items-center gap-2.5 border-t-2 px-3.5 py-3', s.done || s.current ? 'border-mark' : 'border-line', s.current && 'bg-white')}
           >
-            {isProcessing ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Extracting Structured Criteria & Publishing...</span>
-              </>
-            ) : (
-              <span>Create Tender & Extract Requirements</span>
-            )}
-          </Button>
+            <span
+              className={cx(
+                'mono inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full text-[11px] font-bold',
+                s.done ? 'bg-mark text-white' : s.current ? 'border-[1.5px] border-mark' : 'border-[1.5px] border-line-2 text-fg-3'
+              )}
+            >
+              {s.done ? <Check className="h-3 w-3" aria-label="Done" /> : s.n}
+            </span>
+            <span className="flex flex-col">
+              <span className={cx('text-[13px] font-semibold', !s.done && !s.current && 'text-fg-2')}>{s.t}</span>
+              <span className="text-[11px] text-fg-3">{s.d}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+
+      <form onSubmit={onSubmit} className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-w-0 flex-col gap-4">
+          <section aria-label="Tender details" className="card flex flex-col gap-4 p-5">
+            <h2 className="h2">Tender details</h2>
+            <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+              {inputs.map((f) => (
+                <div key={f.id} className={cx('flex flex-col gap-1.5', 'span' in f && f.span && 'sm:col-span-2')}>
+                  <label htmlFor={`t-${f.id}`} className="label">
+                    {f.label}
+                    {'required' in f && f.required ? <span className="text-fail"> *</span> : null}
+                  </label>
+                  {'select' in f ? (
+                    <select id={`t-${f.id}`} className="input" value={form[f.id]} onChange={set(f.id)}>
+                      {f.select.map((o) => (
+                        <option key={o}>{o}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      id={`t-${f.id}`}
+                      className={cx('input', 'mono' in f && f.mono && 'mono')}
+                      type={'type' in f ? f.type : 'text'}
+                      step={'type' in f && f.type === 'number' ? 'any' : undefined}
+                      min={'type' in f && f.type === 'number' ? 0 : undefined}
+                      required={'required' in f && f.required}
+                      value={form[f.id]}
+                      onChange={set(f.id)}
+                    />
+                  )}
+                </div>
+              ))}
+              <div className="flex flex-col gap-1.5 sm:col-span-2">
+                <label htmlFor="t-description" className="label">Scope summary</label>
+                <textarea id="t-description" className="input" rows={3} value={form.description} onChange={set('description')} />
+              </div>
+            </div>
+          </section>
+
+          <section aria-label="Checks applied to every bid" className="card overflow-hidden">
+            <div className="flex flex-col gap-1 px-5 py-4">
+              <h2 className="h2">Check each clause before publishing</h2>
+              <span className="text-xs text-fg-3">
+                These are the rules the compliance engine applies to every bid on this tender. Thresholds come from the values you entered above.
+              </span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] border-collapse text-xs">
+                <thead>
+                  <tr className="border-y border-line bg-page text-left">
+                    <th scope="col" className="th px-5 py-2.5">Clause</th>
+                    <th scope="col" className="th px-3 py-2.5">Requirement</th>
+                    <th scope="col" className="th px-3 py-2.5">Category</th>
+                    <th scope="col" className="th px-3 py-2.5">Rule</th>
+                    <th scope="col" className="th px-3 py-2.5">Evidence expected</th>
+                    <th scope="col" className="th px-5 py-2.5">Mandatory</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clauses.map((c) => (
+                    <tr key={c.clause} className="tr">
+                      <td className="mono px-5 py-2.5 text-fg-2">{c.clause}</td>
+                      <td className="px-3 py-2.5 text-[13px] font-semibold">{c.title}</td>
+                      <td className="px-3 py-2.5"><CategoryChip category={c.category} /></td>
+                      <td className="mono px-3 py-2.5 text-[11px]">{c.rule}</td>
+                      <td className="px-3 py-2.5 text-fg-2">{c.evidence}</td>
+                      <td className="px-5 py-2.5">{c.mandatory ? 'Yes' : 'No'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
+
+        <aside className="flex flex-col gap-4">
+          <section aria-label="Clauses by category" className="card flex flex-col gap-3 p-[18px]">
+            <h2 className="h2 text-sm">Clauses by category</h2>
+            <ul className="m-0 flex list-none flex-col gap-2.5 p-0" aria-label="Number of clauses per category">
+              {cats.map(([name, n]) => (
+                <li key={name} className="grid grid-cols-[96px_minmax(0,1fr)_20px] items-center gap-2.5 text-xs">
+                  <span className={cx('cat', categoryClass(name))}>{name}</span>
+                  <span className="block h-2.5">
+                    <span className="mark block h-2.5 rounded-r" title={`${name}: ${n} clauses`} style={{ width: `${(n / maxCat) * 100}%`, background: CAT_FILL[name] }} />
+                  </span>
+                  <span className="mono text-right font-semibold">{n}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+          <section aria-label="Summary" className="panel flex flex-col gap-2.5 p-[18px] text-xs">
+            <h2 className="h2 text-sm">Summary</h2>
+            <dl className="m-0 grid grid-cols-[88px_minmax(0,1fr)] gap-2">
+              <dt className="text-fg-3">Reference</dt>
+              <dd className="mono m-0 break-words">{form.reference || '—'}</dd>
+              <dt className="text-fg-3">Closes</dt>
+              <dd className="m-0">{form.closingDate || '—'}</dd>
+              <dt className="text-fg-3">Estimate</dt>
+              <dd className="m-0">{form.estimatedValue || '—'}</dd>
+              <dt className="text-fg-3">EMD</dt>
+              <dd className="m-0">{form.emd || '—'}</dd>
+            </dl>
+          </section>
+          {error ? (
+            <p role="alert" className="m-0 rounded-lg border border-[#FECACA] bg-[#FEF2F2] p-3 text-[13px] text-[#991B1B]">{error}</p>
+          ) : null}
+          <div className="flex gap-2">
+            <Link href="/authority/tenders" className="btn btn-secondary flex-1">Cancel</Link>
+            <button type="submit" className="btn btn-primary flex-1" disabled={submitting || !detailsDone}>
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+              Publish tender
+            </button>
+          </div>
+          {!detailsDone ? <span className="text-[11px] text-fg-3">Fill the required fields (*) to publish.</span> : null}
+        </aside>
       </form>
-    </div>
+    </PageBody>
   );
 }

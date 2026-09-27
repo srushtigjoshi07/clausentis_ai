@@ -36,6 +36,11 @@ import { getCurrentTimestamp } from './connectors/base';
  */
 const LIVE_ADAPTERS = new Set<GovConnectorId>();
 
+/** Read-only: connector ids that call a live government API (used by the Data sources page). */
+export function getLiveAdapterIds(): GovConnectorId[] {
+  return Array.from(LIVE_ADAPTERS);
+}
+
 function integrationNotConfigured(connectorId: GovConnectorId, source: string): GovVerificationResult {
   return {
     connectorId,

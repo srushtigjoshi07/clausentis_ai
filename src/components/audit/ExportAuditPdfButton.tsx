@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { Download, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { getAuditEventsForExport } from '@/lib/actions/audit';
 import { downloadAuditPdf, AuditPdfOptions } from '@/lib/pdf/audit-pdf-generator';
 
@@ -101,40 +100,25 @@ export function ExportAuditPdfButton({
 
   return (
     <div className="relative inline-flex items-center">
-      <Button
-        variant={variant}
-        size={size}
+      <button
+        type="button"
         onClick={handleExport}
         disabled={loading}
-        className={className || "h-8 px-3 text-xs border-[#E5E5E5] text-[#111111] hover:bg-[#F7F7F7] rounded-md bg-white cursor-pointer gap-1.5"}
+        className={className || (variant === 'default' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm')}
+        data-size={size}
       >
-        {loading ? (
-          <>
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#111111]" />
-            <span>Generating PDF...</span>
-          </>
-        ) : (
-          <>
-            <Download className="w-3.5 h-3.5 text-[#111111]" />
-            <span>{label}</span>
-          </>
-        )}
-      </Button>
-
-      {/* Inline Feedback Toast */}
+        {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Download className="h-3.5 w-3.5" aria-hidden="true" />}
+        <span>{loading ? 'Generating PDF…' : label}</span>
+      </button>
+      <span role="status" aria-live="polite" className="sr-only-v2">{message?.text ?? ''}</span>
       {message && (
         <div
-          className={`absolute top-full mt-2 right-0 z-50 flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs shadow-md whitespace-nowrap animate-in fade-in duration-200 ${
-            message.type === 'success'
-              ? 'bg-white text-[#111111] border-[#E5E5E5]'
-              : 'bg-[#FFF5F5] text-[#991B1B] border-[#FCA5A5]'
+          className={`absolute right-0 top-full z-50 mt-2 flex items-center gap-2 whitespace-nowrap rounded-md border px-3 py-1.5 text-xs shadow-md ${
+            message.type === 'success' ? 'border-line bg-white text-fg' : 'border-[#FECACA] bg-[#FEF2F2] text-[#991B1B]'
           }`}
+          aria-hidden="true"
         >
-          {message.type === 'success' ? (
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#111111]" />
-          ) : (
-            <AlertCircle className="w-3.5 h-3.5 text-[#991B1B]" />
-          )}
+          {message.type === 'success' ? <CheckCircle2 className="h-3.5 w-3.5 text-pass" /> : <AlertCircle className="h-3.5 w-3.5" />}
           <span className="font-medium">{message.text}</span>
         </div>
       )}

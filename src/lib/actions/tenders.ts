@@ -1,5 +1,7 @@
 'use server';
 
+import { getUserProfile } from '@/app/auth/actions';
+
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { parsePdfDocument } from '@/lib/document/pdf-parser';
@@ -806,6 +808,48 @@ export async function getAuthorityManagedTenders(): Promise<AuthorityTenderItem[
   });
 }
 
+/**
+ * Tenders the signed-in officer has published through Clausentis (this server's
+ * in-memory list plus the officer's rows in `tenders`). Unlike
+ * getAuthorityManagedTenders it does not mix in the static demo catalogue.
+ */
+export async function getPublishedAuthorityTenders(): Promise<AuthorityTenderItem[]> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const fromDb: AuthorityTenderItem[] = [];
+  if (user) {
+    try {
+      const { data } = await supabase
+        .from('tenders')
+        .select('id, title, reference_number, created_at, status')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      for (const t of data || []) {
+        fromDb.push({
+          id: String(t.id),
+          title: String(t.title || 'Untitled tender'),
+          reference: String(t.reference_number || String(t.id).slice(0, 12).toUpperCase()),
+          status: 'ACTIVE',
+          closingDate: '',
+          bidsCount: 0,
+          pendingReviewsCount: 0,
+          category: '',
+          estimatedValue: '',
+          publishedDate: t.created_at ? String(t.created_at) : undefined,
+        });
+      }
+    } catch (err) {
+      console.warn('[AuthorityTenders] Published tenders fetch notice:', err);
+    }
+  }
+  const seen = new Set<string>();
+  return [...CREATED_AUTHORITY_TENDERS, ...fromDb].filter((t) => {
+    if (seen.has(t.id)) return false;
+    seen.add(t.id);
+    return true;
+  });
+}
+
 export async function createAuthorityTenderAction(formData: {
   title: string;
   reference: string;
@@ -820,6 +864,11 @@ export async function createAuthorityTenderAction(formData: {
   minExperience: string;
   localContent: string;
 }): Promise<{ success: boolean; tenderId: string; extractedCount: number; error?: string }> {
+  // Only Tender Authority officers (per profiles.role) may publish tenders.
+  const profile = await getUserProfile();
+  if (!profile || profile.role !== 'tender_authority') {
+    return { success: false, tenderId: '', extractedCount: 0, error: 'Only Tender Authority officers can publish tenders.' };
+  }
   try {
     const tenderId = `tender-${Date.now()}`;
     const newTender: AuthorityTenderItem = {

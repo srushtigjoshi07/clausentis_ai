@@ -1,162 +1,77 @@
-'use client';
-
-import React from 'react';
 import Link from 'next/link';
-import { 
-  Building2, 
-  CheckCircle2, 
-  AlertTriangle, 
-  XCircle, 
-  Users
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { listBidSummaries, sortByUrgency } from '@/lib/views/officer';
+import { EmptyState, PageBody, PageHeader, RawPill } from '@/components/v2/ui';
+import { StackedStatusBar } from '@/components/v2/charts';
+import { aiAdviceLabel, decisionLabel, decisionPill, riskLabel, riskPill } from '@/components/v2/status';
 
-import { getAllBidderDossiers } from '@/lib/compliance/repository';
+export const metadata = { title: 'Bid reviews · Clausentis officer portal' };
+export const dynamic = 'force-dynamic';
 
-export default function AuthoritySubmittedBidsPage() {
-  const tender = {
-    id: 'tender-cpcl-2026-0412',
-    title: 'Supply, Installation and Commissioning of High-Pressure Gas Compressor System at Manali Refinery',
-    reference: 'CPCL/ENG/2026/HPGC-0412',
-    totalBidsReceived: 27,
-  };
+export default async function BidReviewsPage() {
+  const bids = listBidSummaries();
+  const awaiting = bids.filter((b) => !b.decision).sort(sortByUrgency);
+  const decided = bids.filter((b) => b.decision);
 
-  const dossiers = getAllBidderDossiers(tender.id);
-
-  const bids = dossiers.map((d) => ({
-    id: d.bidId,
-    bidderName: d.bidderName,
-    registrationNumber: d.registrationNumber,
-    complianceScore: d.complianceScore,
-    riskLevel: d.riskLevel,
-    status: d.officerDecision ? `Decision: ${d.officerDecision.decision}` : d.aiRecommendation.recommendation,
-    mandatoryPassed: d.mandatoryPassed === d.mandatoryTotal,
-    turnover: d.requirementResults.find(r => r.ruleType === 'MINIMUM_VALUE')?.verifiedValue || '₹12.40 Cr',
-    experience: d.requirementResults.find(r => r.ruleType === 'YEARS_EXPERIENCE')?.verifiedValue || '5.0 Yrs',
-    submittedDate: d.submittedAt,
-    submissionId: d.submissionId,
-  }));
+  const table = (rows: typeof bids, caption: string) => (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[860px] border-collapse text-[13px]">
+        <caption className="sr-only-v2">{caption}</caption>
+        <thead>
+          <tr className="border-b border-line bg-page text-left">
+            <th scope="col" className="th px-5 py-2.5">Bid</th>
+            <th scope="col" className="th px-3 py-2.5">Tender</th>
+            <th scope="col" className="th px-3 py-2.5">Score</th>
+            <th scope="col" className="th px-3 py-2.5">Clauses</th>
+            <th scope="col" className="th px-3 py-2.5">Risk</th>
+            <th scope="col" className="th px-3 py-2.5">AI advice</th>
+            <th scope="col" className="th px-3 py-2.5">Decision</th>
+            <th scope="col" className="th px-5 py-2.5"><span className="sr-only-v2">Action</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((b) => (
+            <tr key={b.bidId} className="tr">
+              <td className="px-5 py-3">
+                <span className="flex flex-col gap-0.5">
+                  <span className="font-semibold">{b.bidderName}</span>
+                  <span className="mono text-[11px] text-fg-3">{b.submissionId} · {b.submittedAt}</span>
+                </span>
+              </td>
+              <td className="mono px-3 py-3 text-[11px] text-fg-2">
+                <Link href={`/authority/tenders/${b.tenderId}`} className="hover:text-brand hover:underline">{b.tenderReference}</Link>
+              </td>
+              <td className="mono px-3 py-3 font-semibold">{b.score}</td>
+              <td className="w-[140px] px-3 py-3"><StackedStatusBar counts={b.counts} label={`${b.bidderName} clauses`} height={8} /></td>
+              <td className="px-3 py-3"><RawPill cls={riskPill(b.risk)}>{riskLabel(b.risk)}</RawPill></td>
+              <td className="px-3 py-3 text-fg-2">{aiAdviceLabel(b.aiRecommendation)}</td>
+              <td className="px-3 py-3">
+                <RawPill cls={decisionPill(b.decision?.code)}>{b.decision ? decisionLabel(b.decision.code) : 'Awaiting'}</RawPill>
+              </td>
+              <td className="px-5 py-3 text-right">
+                <Link href={`/authority/bids/${b.bidId}`} className="btn btn-secondary btn-sm">{b.decision ? 'Open' : 'Review'}</Link>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
   return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-12 font-sans bg-white">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E5E5E5] pb-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#111111] bg-[#F7F7F7] px-2 py-0.5 rounded border border-[#E5E5E5]">
-              Procurement Oversight
-            </span>
-            <span className="text-[#777777] text-xs">•</span>
-            <span className="text-xs text-[#555555] font-mono">Real-Time Submissions Intake</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#111111] mt-1">
-            Submitted Bids & Proposals
-          </h1>
-          <p className="text-xs sm:text-sm text-[#555555] mt-0.5">
-            Incoming vendor proposals automatically evaluated against tender clauses with transparent evidence trails.
-          </p>
+    <PageBody>
+      <PageHeader eyebrow="Bid reviews" title="Bids to review and decide" />
+      <section aria-label="Awaiting decision" className="card overflow-hidden">
+        <div className="px-5 pb-3 pt-4">
+          <h2 className="h2">Awaiting your decision <span className="mono text-xs font-normal text-fg-3">{awaiting.length}</span></h2>
         </div>
-
-        <Link href={`/authority/tenders/${tender.id}/compare-bids`}>
-          <Button className="h-9 px-4 bg-[#111111] hover:bg-[#222222] text-white font-medium text-xs gap-1.5 cursor-pointer shadow-sm rounded-md">
-            <Users className="w-3.5 h-3.5" />
-            <span>Compare All Bidders Side-by-Side</span>
-          </Button>
-        </Link>
-      </div>
-
-      {/* Tender Header Banner */}
-      <div className="p-5 rounded-lg border border-[#E5E5E5] bg-[#F7F7F7] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs uppercase font-mono text-[#777777]">Tender:</span>
-            <span className="text-xs text-[#111111] font-mono font-semibold">{tender.reference}</span>
-          </div>
-          <h2 className="text-base font-semibold text-[#111111] mt-0.5">{tender.title}</h2>
+        {awaiting.length ? table(awaiting, 'Bids awaiting a decision') : <div className="px-5 pb-5"><EmptyState title="Nothing waiting" /></div>}
+      </section>
+      <section aria-label="Decided" className="card overflow-hidden">
+        <div className="px-5 pb-3 pt-4">
+          <h2 className="h2">Decided <span className="mono text-xs font-normal text-fg-3">{decided.length}</span></h2>
         </div>
-
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-mono bg-white px-3 py-1.5 rounded-md border border-[#E5E5E5] text-[#111111] font-semibold">
-            {tender.totalBidsReceived} bids received
-          </span>
-        </div>
-      </div>
-
-      {/* Submitted Bids List */}
-      <div className="space-y-4">
-        {bids.map((bid) => (
-          <div
-            key={bid.id}
-            className="p-5 sm:p-6 rounded-lg border border-[#E5E5E5] bg-white hover:border-[#CCCCCC] transition-all space-y-4 shadow-sm"
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5E5E5] pb-3">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-mono text-xs text-[#777777]">{bid.submissionId}</span>
-                  <span className="text-[#777777] text-xs">•</span>
-                  <span className="text-xs text-[#555555] font-mono">{bid.registrationNumber}</span>
-                </div>
-                <h3 className="text-base sm:text-lg font-bold text-[#111111]">
-                  {bid.bidderName}
-                </h3>
-              </div>
-
-              <div className="flex items-center gap-3">
-                {/* Risk Level Badge */}
-                {bid.riskLevel === 'LOW' && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#F7F7F7] text-[#111111] border border-[#E5E5E5]">
-                    <CheckCircle2 className="w-3 h-3 text-[#111111]" />
-                    Risk: LOW
-                  </span>
-                )}
-                {bid.riskLevel === 'MEDIUM' && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#F7F7F7] text-[#555555] border border-[#CCCCCC]">
-                    <AlertTriangle className="w-3 h-3 text-[#555555]" />
-                    Risk: MEDIUM
-                  </span>
-                )}
-                {bid.riskLevel === 'HIGH' && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#111111] text-white border border-[#111111]">
-                    <XCircle className="w-3 h-3 text-white" />
-                    Risk: HIGH
-                  </span>
-                )}
-
-                <Link href={`/authority/bids/${bid.id}`}>
-                  <Button size="sm" className="h-8 px-4 bg-[#111111] hover:bg-[#222222] text-white font-medium text-xs gap-1.5 cursor-pointer rounded-md">
-                    <span>Review Proposal</span>
-                  </Button>
-                </Link>
-              </div>
-            </div>
-
-            {/* Metrics ribbon */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-              <div>
-                <span className="text-[10px] text-[#777777] uppercase font-mono">Compliance Score</span>
-                <p className="font-mono font-bold text-sm text-[#111111] mt-0.5">
-                  {bid.complianceScore}%
-                </p>
-              </div>
-
-              <div>
-                <span className="text-[10px] text-[#777777] uppercase font-mono">Review Status</span>
-                <p className="font-semibold text-[#111111] mt-0.5">{bid.status}</p>
-              </div>
-
-              <div>
-                <span className="text-[10px] text-[#777777] uppercase font-mono">Audited Turnover</span>
-                <p className="font-mono text-[#555555] mt-0.5">{bid.turnover} ({bid.experience} exp)</p>
-              </div>
-
-              <div>
-                <span className="text-[10px] text-[#777777] uppercase font-mono">Submitted At</span>
-                <p className="font-mono text-[#777777] mt-0.5">{bid.submittedDate}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+        {decided.length ? table(decided, 'Bids with a signed decision') : <div className="px-5 pb-5"><EmptyState title="No signed decisions yet" /></div>}
+      </section>
+    </PageBody>
   );
 }
