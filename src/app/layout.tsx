@@ -1,26 +1,23 @@
 import type { Metadata } from 'next';
-import { Manrope } from 'next/font/google';
+import { Lexend, Source_Sans_3 } from 'next/font/google';
 import './globals.css';
 
-const manrope = Manrope({
-  variable: '--font-sans',
+const lexend = Lexend({
+  variable: '--font-lexend',
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600'],
+  display: 'swap',
+});
+
+const sourceSans = Source_Sans_3({
+  variable: '--font-source',
+  subsets: ['latin'],
   display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'Clausentis - Procurement Intelligence, Made Verifiable',
+  title: 'Clausentis · Bid compliance verification',
   description:
-    'AI-powered bid compliance intelligence for government procurement. Connect procurement requirements to verifiable evidence, audit risk signals, and support confident officer decisions.',
-  keywords: [
-    'procurement intelligence',
-    'bid compliance',
-    'tender verification',
-    'government procurement',
-    'evidence verification',
-    'audit trail',
-  ],
+    'Clausentis checks every bid against every tender clause, cross-checks registrations with government sources, and gives the procurement officer the evidence to decide and sign.',
 };
 
 export default function RootLayout({
@@ -29,12 +26,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${manrope.variable} h-full antialiased font-sans`}>
-      <body className="min-h-full flex flex-col font-sans bg-background text-foreground antialiased relative">
-        <div className="relative z-10 flex-1 flex flex-col">
-          {children}
-        </div>
-      </body>
+    <html lang="en" className={`${lexend.variable} ${sourceSans.variable} h-full`}>
+      <body className="min-h-full flex flex-col bg-page text-fg antialiased">{children}</body>
     </html>
   );
 }
