@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Company profile</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 1000px; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A; display: flex; flex-direction: column;">
+  <dc-import name="BidderNav" active="" hint-size="1440px,64px"></dc-import>
+  <main style="box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px; width: 960px;">
+    <header style="display: flex; flex-direction: column; gap: 8px;"><span class="eyebrow">Company profile</span><h1 class="h1">Apex Heavy Engineering Pvt Ltd</h1><p class="sub">Used to pre-check eligibility. Every figure here is verified against your documents when you bid.</p></header>
+
+    <section aria-label="Registrations" class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+      <h2 class="h2">Registrations</h2>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="p-name" class="label">Legal name</label><input id="p-name" class="input" value="Apex Heavy Engineering Pvt Ltd"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="p-cin" class="label">CIN</label><input id="p-cin" class="input mono" value="U28910TN2014PTC099418"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="p-gst" class="label">GSTIN</label><input id="p-gst" class="input mono" value="33AABCA1234F1Z8"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="p-pan" class="label">PAN</label><input id="p-pan" class="input mono" value="AABCA1234F"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="p-udyam" class="label">Udyam number</label><input id="p-udyam" class="input mono" value="UDYAM-TN-02-0049182"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="p-nsic" class="label">NSIC number <span style="font-weight: 400; color: #64748B;">(optional)</span></label><input id="p-nsic" class="input mono" placeholder="Not registered"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;"><label for="p-addr" class="label">Registered address</label><input id="p-addr" class="input" value="Plot 41-B, Ambattur Industrial Estate, Chennai, Tamil Nadu 600058"></div>
+    </section>
+
+    <section aria-label="Declared capability" class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+      <h2 class="h2">Declared capability</h2>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="p-turn" class="label">Average turnover (₹ Cr)</label><input id="p-turn" class="input mono" value="12.40"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="p-exp" class="label">Similar experience (years)</label><input id="p-exp" class="input mono" value="8"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="p-lc" class="label">Local content (%)</label><input id="p-lc" class="input mono" value="68"></div>
+      </div>
+    </section>
+
+    <section aria-label="Account" class="card" style="padding: 20px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; flex-direction: column; gap: 4px;"><h2 class="h2">Account</h2><span style="font-size: 13px; color: #475569;">Bidder account · contracts@apexheavy.com</span></div>
+      <div style="display: flex; gap: 8px;"><a href="SignIn.dc.html" class="btn btn-secondary">Sign out</a><button type="button" class="btn btn-primary">Save profile</button></div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tender and eligibility</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 1080px; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A; display: flex; flex-direction: column;">
+  <dc-import name="BidderNav" active="tenders" hint-size="1440px,64px"></dc-import>
+  <main style="box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px;">
+    <header style="display: flex; flex-direction: column; gap: 10px;">
+      <a href="BidderFindTenders.dc.html" style="font-size: 12px; color: #475569;">← Find tenders</a>
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 6px; max-width: 820px;">
+          <span class="mono" style="font-size: 12px; color: #475569;">CPCL/ENG/2026/HPGC-0412 · Chennai Petroleum Corporation Ltd</span>
+          <h1 class="h1">Supply, Installation and Commissioning of High-Pressure Gas Compressor System at Manali Refinery</h1>
+        </div>
+        <a href="BidderPrepareBid.dc.html" class="btn btn-primary" style="height: 44px;">Prepare my bid</a>
+      </div>
+      <div style="display: flex; gap: 24px; font-size: 13px; color: #475569;">
+        <span>Closes <strong style="color: #0F172A;">28 Sep 2026, 15:00 IST</strong></span><span>Estimate ₹14.50 Cr</span><span>EMD ₹29,00,000 · exempt for registered MSE</span><span>Manali Refinery, Chennai</span>
+      </div>
+    </header>
+
+    <div style="display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start;">
+      <section aria-label="Eligibility pre-check" class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div style="display: flex; flex-direction: column; gap: 4px;"><h2 class="h2">Eligibility pre-check</h2><span style="font-size: 12px; color: #64748B;">From your company profile. Documents are verified in the next step.</span></div>
+          <span class="pill pill-pass">Likely eligible</span>
+        </div>
+        <svg width="700" height="196" viewBox="0 0 700 196" role="img" aria-label="Turnover 12.40 crore versus 10 required; experience 8 years versus 5; local content 68 percent versus 50">
+          <sc-for list="{{bullets}}" as="b" hint-placeholder-count="3">
+            <g class="mark">
+              <title>{{b.tip}}</title>
+              <text x="0" y="{{b.ty}}" class="clabel" style="font-weight: 600;">{{b.label}}</text>
+              <text x="0" y="{{b.ty2}}" class="axis">{{b.clause}}</text>
+              <rect x="190" y="{{b.y}}" width="400" height="18" fill="#F1F5F9"></rect>
+              <rect x="190" y="{{b.y}}" width="{{b.w}}" height="18" fill="#2563EB"></rect>
+              <line x1="{{b.tx}}" y1="{{b.y1}}" x2="{{b.tx}}" y2="{{b.y2}}" stroke="#B91C1C" stroke-width="2"></line>
+              <text x="606" y="{{b.ty}}" class="cvalue">{{b.value}}</text>
+              <text x="606" y="{{b.ty2}}" class="axis">{{b.need}}</text>
+            </g>
+          </sc-for>
+        </svg>
+        <span style="display: flex; gap: 16px; font-size: 11px; color: #475569;"><span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-ink"></span>Your profile</span><span style="display: inline-flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 2px; height: 12px; background: #B91C1C;"></span>Tender minimum</span></span>
+      </section>
+
+      <section aria-label="Documents needed" class="card" style="overflow: hidden;">
+        <div style="padding: 16px 20px 10px; display: flex; justify-content: space-between; align-items: center;"><h2 class="h2">Documents you'll need</h2><span class="mono" style="font-size: 12px; color: #475569;">7 of 10 in vault</span></div>
+        <sc-for list="{{docs}}" as="d" hint-placeholder-count="10">
+          <div class="tr" style="display: grid; grid-template-columns: 48px minmax(0, 1fr) 110px; gap: 10px; align-items: center; padding: 9px 20px; font-size: 12px;">
+            <span class="mono" style="color: #64748B;">{{d.c}}</span>
+            <span>{{d.t}}</span>
+            <span><span class="pill {{d.cls}}">{{d.s}}</span></span>
+          </div>
+        </sc-for>
+      </section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const mk = (i, label, clause, max, min, you, unit) => {
+      const y = 12 + i * 60, s = (v) => 190 + (v / max) * 400;
+      return { label, clause, y, y1: y - 5, y2: y + 23, ty: y + 9, ty2: y + 23, w: (you / max) * 400, tx: s(min), value: `${you}${unit}`, need: `NEED ${min}${unit}`.toUpperCase(), tip: `${label}: you ${you}${unit}, minimum ${min}${unit}` };
+    };
+    const bullets = [
+      mk(0, 'Average turnover', 'CLAUSE 4.1 · ₹ CRORE', 20, 10, 12.4, ' Cr'),
+      mk(1, 'Similar experience', 'CLAUSE 4.2 · YEARS', 10, 5, 8, ' yrs'),
+      mk(2, 'Local content', 'CLAUSE 6.3 · PERCENT', 100, 50, 68, '%')
+    ];
+    const cls = { 'In vault': 'pill-pass', 'Upload': 'pill-neutral', 'Expires soon': 'pill-review' };
+    const docs = [
+      ['4.1', 'Audited financial statements (3 years)', 'In vault'],
+      ['4.2', 'Experience / completion certificates', 'In vault'],
+      ['2.1', 'GST registration (REG-06)', 'In vault'],
+      ['2.2', 'PAN card', 'In vault'],
+      ['7.1', 'Udyam certificate (EMD exemption)', 'In vault'],
+      ['5.1', 'OEM manufacturer authorization for this tender', 'Upload'],
+      ['6.3', 'Local content declaration', 'In vault'],
+      ['3.4', 'Non-blacklisting affidavit (Annexure-B)', 'Upload'],
+      ['8.2', 'ISO 9001:2015 certificate', 'Expires soon'],
+      ['5.4', 'API 618 technical datasheet', 'Upload']
+    ].map(([c, t, s]) => ({ c, t, s, cls: cls[s] }));
+    return { bullets, docs };
+  }
+}
+</script>
+</body>
+</html>

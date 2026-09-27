@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tenders</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 900px; display: flex; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A;">
+  <dc-import name="OfficerNav" active="tenders" height="{{navH}}" hint-size="240px,900px"></dc-import>
+  <main style="flex-grow: 1; min-width: 0; box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px;">
+    <header style="display: flex; align-items: flex-end; justify-content: space-between;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <span class="eyebrow">Tenders</span>
+        <h1 class="h1">Tenders on Clausentis</h1>
+      </div>
+      <a href="OfficerNewTender.dc.html" class="btn btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+        Publish tender
+      </a>
+    </header>
+
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <label for="tsearch" style="position: absolute; width: 1px; height: 1px; overflow: hidden;">Search tenders</label>
+      <input id="tsearch" class="input" placeholder="Search by reference, title or organisation" style="width: 380px;">
+      <label for="tstatus" style="position: absolute; width: 1px; height: 1px; overflow: hidden;">Status</label>
+      <select id="tstatus" class="input" style="width: 160px;"><option>All statuses</option><option>Accepting bids</option><option>Evaluating</option><option>Awarded</option></select>
+      <label for="tcat" style="position: absolute; width: 1px; height: 1px; overflow: hidden;">Category</label>
+      <select id="tcat" class="input" style="width: 160px;"><option>All categories</option><option>Goods</option><option>Services</option><option>Works</option></select>
+      <span style="margin-left: auto; font-size: 12px; color: #64748B;">4 tenders</span>
+    </div>
+
+    <section aria-label="Tender list" class="card" style="overflow: hidden;">
+      <div class="th" style="display: grid; grid-template-columns: minmax(0, 2.6fr) 90px minmax(0, 1.3fr) 110px 70px 130px; gap: 16px; padding: 12px 20px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0;">
+        <span>Tender</span><span>Category</span><span>Estimated value</span><span>Closes</span><span>Bids</span><span>Stage</span>
+      </div>
+      <sc-for list="{{tenders}}" as="t" hint-placeholder-count="4">
+        <a href="OfficerTenderWorkspace.dc.html" class="tr" style="display: grid; grid-template-columns: minmax(0, 2.6fr) 90px minmax(0, 1.3fr) 110px 70px 130px; gap: 16px; align-items: center; padding: 16px 20px; color: #0F172A; text-decoration: none;">
+          <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+            <span class="mono" style="font-size: 11px; color: #64748B;">{{t.ref}}</span>
+            <span style="font-size: 14px; font-weight: 600; line-height: 1.35;">{{t.title}}</span>
+            <span style="font-size: 12px; color: #475569;">{{t.org}} · {{t.place}}</span>
+          </span>
+          <span style="font-size: 13px; color: #475569;">{{t.cat}}</span>
+          <span style="display: flex; align-items: center; gap: 10px;">
+            <span style="display: block; width: 120px; height: 10px; background: #EEF2F7; border-radius: 0 4px 4px 0; position: relative;">
+              <span class="mark" title="{{t.value}}" style="position: absolute; left: 0; top: 0; display: block; width: {{t.w}}px; height: 10px; background: #2563EB; border-radius: 0 4px 4px 0;"></span>
+            </span>
+            <span class="mono" style="font-size: 12px;">{{t.value}}</span>
+          </span>
+          <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 13px;">{{t.close}}</span><span class="mono" style="font-size: 11px; color: #64748B;">{{t.left}}</span></span>
+          <span class="mono" style="font-size: 14px; font-weight: 600;">{{t.bids}}</span>
+          <span><span class="pill {{t.stageCls}}">{{t.stage}}</span></span>
+        </a>
+      </sc-for>
+    </section>
+    <p style="margin: 0; font-size: 12px; color: #64748B;">Estimated values share one scale; the longest bar is ₹35.80 Cr.</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const t = [
+      { ref: 'CPCL/ENG/2026/HPGC-0412', title: 'Supply, Installation and Commissioning of High-Pressure Gas Compressor System at Manali Refinery', org: 'Chennai Petroleum Corporation Ltd', place: 'Chennai', cat: 'Goods', cr: 14.5, close: '28 Sep 2026', left: 'IN 2 DAYS', bids: 4, stage: 'Evaluating', stageCls: 'pill-ink' },
+      { ref: 'IOCL/RHQ/INST/2026/AMC-882', title: 'Comprehensive Annual Maintenance Contract for Distributed Control Systems & Field Instrumentation', org: 'Indian Oil Corporation Ltd', place: 'Panipat & Mathura', cat: 'Services', cr: 8.2, close: '5 Oct 2026', left: 'IN 9 DAYS', bids: 0, stage: 'Accepting bids', stageCls: 'pill-neutral' },
+      { ref: 'BHEL/PSWR/PUR/ST-2026-904', title: 'Manufacturing and Supply of High-Grade Boiler Quality Steel Plates (SA 516 Gr 70)', org: 'Bharat Heavy Electricals Ltd', place: 'Nagpur', cat: 'Goods', cr: 22.0, close: '14 Oct 2026', left: 'IN 18 DAYS', bids: 0, stage: 'Accepting bids', stageCls: 'pill-neutral' },
+      { ref: 'NTPC/CC/CS-2026/FGD-119', title: 'Civil, Structural & Architectural Works for Wet Limestone FGD System', org: 'NTPC Ltd', place: 'Ramagundam', cat: 'Works', cr: 35.8, close: '22 Oct 2026', left: 'IN 26 DAYS', bids: 0, stage: 'Accepting bids', stageCls: 'pill-neutral' }
+    ];
+    return { navH: 900, tenders: t.map((x) => ({ ...x, value: `₹${x.cr.toFixed(2)} Cr`, w: Math.round((x.cr / 35.8) * 120) })) };
+  }
+}
+</script>
+</body>
+</html>

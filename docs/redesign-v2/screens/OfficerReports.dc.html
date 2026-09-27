@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Reports</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 960px; display: flex; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A;">
+  <dc-import name="OfficerNav" active="reports" height="{{navH}}" hint-size="240px,960px"></dc-import>
+  <main style="flex-grow: 1; min-width: 0; box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px;">
+    <header style="display: flex; justify-content: space-between; align-items: flex-end;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <span class="eyebrow">Reports</span>
+        <h1 class="h1">Committee-ready exports</h1>
+      </div>
+      <label for="r-tender" style="position: absolute; width: 1px; height: 1px; overflow: hidden;">Tender</label>
+      <select id="r-tender" class="input" style="width: 300px;"><option>CPCL/ENG/2026/HPGC-0412</option></select>
+    </header>
+
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start;">
+      <section aria-label="Report types" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+        <sc-for list="{{reports}}" as="r" hint-placeholder-count="8">
+          <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+            <span style="display: flex; justify-content: space-between; align-items: center;"><span class="mono" style="font-size: 11px; color: #64748B;">{{r.n}}</span><span class="pill pill-neutral">{{r.fmt}}</span></span>
+            <span style="font-size: 14px; font-weight: 600;">{{r.t}}</span>
+            <span style="font-size: 12px; color: #475569; line-height: 1.5;">{{r.d}}</span>
+            <span style="display: flex; gap: 8px; margin-top: auto;">
+              <a href="#" class="btn btn-secondary" style="height: 32px; font-size: 12px;">Preview</a>
+              <a href="#" class="btn btn-primary" style="height: 32px; font-size: 12px;">Download PDF</a>
+            </span>
+          </div>
+        </sc-for>
+      </section>
+
+      <aside class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+        <span class="eyebrow">Preview · Tender compliance summary</span>
+        <h2 class="h2">Mandatory clauses met, per bid</h2>
+        <sc-for list="{{bars}}" as="b" hint-placeholder-count="4">
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <span style="display: flex; justify-content: space-between; font-size: 12px;"><span style="font-weight: 600;">{{b.n}}</span><span class="mono">{{b.v}} / 9</span></span>
+            <span style="display: flex; gap: 2px; height: 12px;">
+              <span title="{{b.n}}: {{b.v}} met" style="display: block; height: 12px; flex: {{b.v}} 1 0; background: #2563EB;"></span>
+              <sc-if value="{{b.gap}}" hint-placeholder-val="{{true}}"><span title="{{b.n}}: {{b.gap}} not met" style="display: block; height: 12px; flex: {{b.gap}} 1 0; background: #E2E8F0; border-radius: 0 4px 4px 0;"></span></sc-if>
+            </span>
+          </div>
+        </sc-for>
+        <span style="display: flex; gap: 14px; font-size: 11px; color: #475569;"><span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-ink"></span>Met</span><span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-track"></span>Not met</span></span>
+        <span style="font-size: 12px; color: #475569; border-top: 1px solid #EEF2F6; padding-top: 12px;">Every report carries the engine version, source citations and the decision hash. Recommendations are marked as advisory.</span>
+      </aside>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const reports = [
+      ['Tender compliance summary', 'Qualification standing of every bid with mandatory pass and fail counts.'],
+      ['Bid comparison matrix', 'Clause-by-clause outcomes for all bids side by side.'],
+      ['Risk & discrepancy assessment', 'Contradictions, debarment flags and risk reasons per bid.'],
+      ['Requirement-wise compliance matrix', 'Each clause with the evidence and page cited for every bid.'],
+      ['Portal verification report', 'What each government source returned, and which were sandbox.'],
+      ['Document & evidence integrity', 'File hashes and forensic checks for every submitted document.'],
+      ['Evaluation committee summary', 'Recommendations and signed officer decisions for the minutes.'],
+      ['Audit ledger', 'The complete, time-ordered audit trail with decision hashes.']
+    ].map(([t, d], i) => ({ t, d, n: `R${i + 1}`, fmt: 'PDF' }));
+    const bars = [
+      { n: 'Apex Heavy', v: 9 }, { n: 'ABC Industrial', v: 9 },
+      { n: 'XYZ Engineering', v: 8 }, { n: 'PQR Industries', v: 5 }
+    ].map((b) => ({ ...b, gap: 9 - b.v }));
+    return { navH: 960, reports, bars };
+  }
+}
+</script>
+</body>
+</html>

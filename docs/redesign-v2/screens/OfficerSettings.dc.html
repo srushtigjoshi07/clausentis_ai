@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Officer settings</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 900px; display: flex; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A;">
+  <dc-import name="OfficerNav" active="settings" height="{{navH}}" hint-size="240px,900px"></dc-import>
+  <main style="flex-grow: 1; min-width: 0; box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px; max-width: 900px;">
+    <header style="display: flex; flex-direction: column; gap: 8px;">
+      <span class="eyebrow">Settings</span>
+      <h1 class="h1">Your account</h1>
+    </header>
+
+    <section aria-label="Profile" class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+      <h2 class="h2">Profile</h2>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="s-name" class="label">Full name</label><input id="s-name" class="input" value="[Officer name]"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="s-desig" class="label">Designation</label><input id="s-desig" class="input" value="Senior Procurement Officer"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="s-email" class="label">Official email</label><input id="s-email" class="input" value="[officer@cpcl.co.in]"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="s-org" class="label">Organisation</label><input id="s-org" class="input" value="Chennai Petroleum Corporation Ltd"></div>
+      </div>
+      <div style="display: flex; justify-content: flex-end;"><button type="button" class="btn btn-primary">Save profile</button></div>
+    </section>
+
+    <section aria-label="Role" class="card" style="padding: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <h2 class="h2">Role</h2>
+        <span style="font-size: 13px; color: #475569;">Tender Authority. Roles are assigned by your administrator and can't be changed here.</span>
+      </div>
+      <span class="pill pill-ink">Tender Authority</span>
+    </section>
+
+    <section aria-label="Notifications" class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 10px;">
+      <h2 class="h2">Email me when</h2>
+      <label style="display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 13px;"><input type="checkbox" checked> A new bid is submitted on my tenders</label>
+      <label style="display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 13px;"><input type="checkbox" checked> A bid is flagged critical or debarred</label>
+      <label style="display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 13px;"><input type="checkbox"> A tender closes in 48 hours</label>
+    </section>
+
+    <section aria-label="Session" class="card" style="padding: 20px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; flex-direction: column; gap: 4px;"><h2 class="h2">Sign out</h2><span style="font-size: 13px; color: #475569;">Ends this session on this device.</span></div>
+      <a href="SignIn.dc.html" class="btn btn-secondary">Sign out</a>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return { navH: 900 }; }
+}
+</script>
+</body>
+</html>

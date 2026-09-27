@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Clausentis app flow</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}
+.step{display:flex;flex-direction:column;gap:4px;width:178px;box-sizing:border-box;padding:12px 14px;border:1px solid #E2E8F0;border-radius:8px;background:#FFFFFF;text-decoration:none;color: #0F172A}
+.step:hover{border-color: #2563EB;text-decoration:none}
+.step-key{border-color: #2563EB;box-shadow:0 1px 0 #2563EB}
+.arrow{flex-shrink:0;color:#94A3B8}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1180px; box-sizing: border-box; padding: 56px 64px; background: #FFFFFF; display: flex; flex-direction: column; gap: 36px; font-family: 'Source Sans 3', system-ui, sans-serif;">
+  <header style="display: flex; flex-direction: column; gap: 10px; max-width: 900px;">
+    <span class="eyebrow">Clausentis · App flow v2</span>
+    <h1 class="h1" style="font-size: 40px;">One journey per role, from tender to signed decision</h1>
+    <p class="sub" style="font-size: 15px;">The bidder checks and submits a bid, the engine verifies it against the tender and government sources, and the procurement officer reviews the evidence and signs the decision. Every step writes to the audit trail.</p>
+  </header>
+
+  <section aria-label="Public entry" style="display: flex; flex-direction: column; gap: 12px;">
+    <span class="eyebrow">Entry · role comes from the account, never a toggle</span>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a href="Landing.dc.html" class="step"><span class="mono" style="font-size: 10px; color: #64748B;">P1</span><span style="font-size: 13px; font-weight: 600;">Landing</span></a>
+      <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      <a href="SignIn.dc.html" class="step step-key"><span class="mono" style="font-size: 10px; color: #64748B;">P2</span><span style="font-size: 13px; font-weight: 600;">Sign in</span><span style="font-size: 11px; color: #64748B;">Routes by profile role</span></a>
+      <span style="font-size: 12px; color: #64748B; padding: 0 8px;">or</span>
+      <a href="SignUp.dc.html" class="step"><span class="mono" style="font-size: 10px; color: #64748B;">P3</span><span style="font-size: 13px; font-weight: 600;">Register as bidder</span><span style="font-size: 11px; color: #64748B;">Officers are provisioned</span></a>
+      <a href="ForgotPassword.dc.html" class="step"><span class="mono" style="font-size: 10px; color: #64748B;">P4</span><span style="font-size: 13px; font-weight: 600;">Reset password</span></a>
+    </div>
+  </section>
+
+  <section aria-label="Bidder journey" style="display: flex; flex-direction: column; gap: 12px;">
+    <span class="eyebrow">Bidder · prepare → check → submit → track</span>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a href="BidderHome.dc.html" class="step"><span class="mono" style="font-size: 10px; color: #64748B;">B1</span><span style="font-size: 13px; font-weight: 600;">Home</span><span style="font-size: 11px; color: #64748B;">Bids, deadlines, readiness</span></a>
+      <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      <a href="BidderFindTenders.dc.html" class="step"><span class="mono" style="font-size: 10px; color: #64748B;">B2</span><span style="font-size: 13px; font-weight: 600;">Find tenders</span><span style="font-size: 11px; color: #64748B;">Eligibility match per tender</span></a>
+      <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      <a href="BidderTenderDetail.dc.html" class="step"><span class="mono" style="font-size: 10px; color: #64748B;">B3</span><span style="font-size: 13px; font-weight: 600;">Tender &amp; eligibility</span><span style="font-size: 11px; color: #64748B;">You vs each threshold</span></a>
+      <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      <a href="BidderPrepareBid.dc.html" class="step step-key"><span class="mono" style="font-size: 10px; color: #64748B;">B4</span><span style="font-size: 13px; font-weight: 600;">Prepare &amp; check bid</span><span style="font-size: 11px; color: #64748B;">Upload, verify, fix</span></a>
+      <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      <a href="BidderSubmitted.dc.html" class="step"><span class="mono" style="font-size: 10px; color: #64748B;">B5</span><span style="font-size: 13px; font-weight: 600;">Submitted receipt</span><span style="font-size: 11px; color: #64748B;">Sealed with SHA-256</span></a>
+      <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      <a href="BidderMyBids.dc.html" class="step"><span class="mono" style="font-size: 10px; color: #64748B;">B6</span><span style="font-size: 13px; font-weight: 600;">My bids</span><span style="font-size: 11px; color: #64748B;">Status &amp; officer decision</span></a>
+    </div>
+    <div style="display: flex; gap: 12px; padding-left: 0;">
+      <a href="BidderVault.dc.html" class="step" style="background: #F8FAFC;"><span class="mono" style="font-size: 10px; color: #64748B;">B7</span><span style="font-size: 13px; font-weight: 600;">Document vault</span><span style="font-size: 11px; color: #64748B;">Reusable, expiry-tracked</span></a>
+      <a href="BidderAssistant.dc.html" class="step" style="background: #F8FAFC;"><span class="mono" style="font-size: 10px; color: #64748B;">B8</span><span style="font-size: 13px; font-weight: 600;">Assistant</span><span style="font-size: 11px; color: #64748B;">Answers from your bid data</span></a>
+      <a href="BidderSettings.dc.html" class="step" style="background: #F8FAFC;"><span class="mono" style="font-size: 10px; color: #64748B;">B9</span><span style="font-size: 13px; font-weight: 600;">Company profile</span><span style="font-size: 11px; color: #64748B;">GSTIN, PAN, Udyam</span></a>
+    </div>
+  </section>
+
+  <section aria-label="Officer journey" style="display: flex; flex-direction: column; gap: 12px;">
+    <span class="eyebrow">Procurement officer · publish → evaluate → verify → decide → record</span>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a href="OfficerOverview.dc.html" class="step"><span class="mono" style="font-size: 10px; color: #64748B;">A1</span><span style="font-size: 13px; font-weight: 600;">Overview</span><span style="font-size: 11px; color: #64748B;">Decision queue, hotspots</span></a>
+      <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      <a href="OfficerTenders.dc.html" class="step"><span class="mono" style="font-size: 10px; color: #64748B;">A2</span><span style="font-size: 13px; font-weight: 600;">Tenders</span><span style="font-size: 11px; color: #64748B;">+ A3 publish with AI</span></a>
+      <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      <a href="OfficerTenderWorkspace.dc.html" class="step"><span class="mono" style="font-size: 10px; color: #64748B;">A4</span><span style="font-size: 13px; font-weight: 600;">Tender workspace</span><span style="font-size: 11px; color: #64748B;">All bids, clause heatmap</span></a>
+      <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      <a href="OfficerBidReview.dc.html" class="step step-key"><span class="mono" style="font-size: 10px; color: #64748B;">A5</span><span style="font-size: 13px; font-weight: 600;">Bid review</span><span style="font-size: 11px; color: #64748B;">Evidence, portals, AI advice</span></a>
+      <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      <a href="OfficerSignDecision.dc.html" class="step step-key"><span class="mono" style="font-size: 10px; color: #64748B;">A6</span><span style="font-size: 13px; font-weight: 600;">Sign decision</span><span style="font-size: 11px; color: #64748B;">Human decides, sealed</span></a>
+      <svg class="arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+      <a href="OfficerAuditTrail.dc.html" class="step"><span class="mono" style="font-size: 10px; color: #64748B;">A8</span><span style="font-size: 13px; font-weight: 600;">Audit trail</span><span style="font-size: 11px; color: #64748B;">Every check, every actor</span></a>
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <a href="OfficerNewTender.dc.html" class="step" style="background: #F8FAFC;"><span class="mono" style="font-size: 10px; color: #64748B;">A3</span><span style="font-size: 13px; font-weight: 600;">Publish tender</span><span style="font-size: 11px; color: #64748B;">AI extracts clauses</span></a>
+      <a href="OfficerPortalVerification.dc.html" class="step" style="background: #F8FAFC;"><span class="mono" style="font-size: 10px; color: #64748B;">A7</span><span style="font-size: 13px; font-weight: 600;">Portal verification</span><span style="font-size: 11px; color: #64748B;">Ad-hoc identity lookup</span></a>
+      <a href="OfficerReports.dc.html" class="step" style="background: #F8FAFC;"><span class="mono" style="font-size: 10px; color: #64748B;">A9</span><span style="font-size: 13px; font-weight: 600;">Reports</span><span style="font-size: 11px; color: #64748B;">8 committee exports</span></a>
+      <a href="OfficerAssistant.dc.html" class="step" style="background: #F8FAFC;"><span class="mono" style="font-size: 10px; color: #64748B;">A10</span><span style="font-size: 13px; font-weight: 600;">Assistant</span><span style="font-size: 11px; color: #64748B;">Grounded in bid records</span></a>
+      <a href="OfficerIntegrations.dc.html" class="step" style="background: #F8FAFC;"><span class="mono" style="font-size: 10px; color: #64748B;">A11</span><span style="font-size: 13px; font-weight: 600;">Data sources</span><span style="font-size: 11px; color: #64748B;">Live vs sandbox, honestly</span></a>
+      <a href="OfficerSettings.dc.html" class="step" style="background: #F8FAFC;"><span class="mono" style="font-size: 10px; color: #64748B;">A12</span><span style="font-size: 13px; font-weight: 600;">Settings</span></a>
+    </div>
+  </section>
+
+  <section aria-label="Route consolidation" class="card" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 12px;">
+    <h2 class="h2">What merges into what</h2>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 32px; font-size: 12px; color: #475569;">
+      <span><span class="mono" style="color: #0F172A;">/dashboard, /tenders, /documents, /reports, /settings</span> → role portals (legacy duplicates retired)</span>
+      <span><span class="mono" style="color: #0F172A;">/authority/compliance, /matched-requirements, compare-bids</span> → A4 Tender workspace</span>
+      <span><span class="mono" style="color: #0F172A;">/authority/bids/[id] + signing modal</span> → A5 Bid review + A6 Sign</span>
+      <span><span class="mono" style="color: #0F172A;">/authority/sih-coverage, /government-verification</span> → A11 Data sources + A7</span>
+      <span><span class="mono" style="color: #0F172A;">/bidder/eligibility, /tenders/[id]/eligibility, /compare</span> → B3 Tender &amp; eligibility</span>
+      <span><span class="mono" style="color: #0F172A;">/bidder/compliance, /government-verification, /tenders/discover</span> → B4 Prepare &amp; check</span>
+      <span><span class="mono" style="color: #0F172A;">/bidder/bids, /bids/[id]/receipt, /bidder/reports</span> → B5 + B6</span>
+      <span><span class="mono" style="color: #0F172A;">/bidder/documents, /authority/documents</span> → B7 vault (officer sees docs inside A5)</span>
+      <span><span class="mono" style="color: #0F172A;">Role switch buttons, 3D backgrounds</span> → removed</span>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

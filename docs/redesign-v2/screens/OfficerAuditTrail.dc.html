@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Audit trail</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 1120px; display: flex; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A;">
+  <dc-import name="OfficerNav" active="audit" height="{{navH}}" hint-size="240px,1120px"></dc-import>
+  <main style="flex-grow: 1; min-width: 0; box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px;">
+    <header style="display: flex; justify-content: space-between; align-items: flex-end;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <span class="eyebrow">Audit trail · CPCL/ENG/2026/HPGC-0412</span>
+        <h1 class="h1">Every check and decision, in order</h1>
+      </div>
+      <a href="#" class="btn btn-secondary">Export audit ledger PDF</a>
+    </header>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+      <section aria-label="Events by actor" class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;"><h2 class="h2">Who acted</h2><span style="font-size: 12px; color: #64748B;">26 recorded events on this tender</span></div>
+        <sc-for list="{{actors}}" as="a" hint-placeholder-count="3">
+          <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: center; font-size: 12px;">
+            <span style="display: flex; flex-direction: column;"><span style="font-weight: 600;">{{a.label}}</span><span style="font-size: 11px; color: #64748B;">{{a.sub}}</span></span>
+            <span style="display: flex; align-items: center; gap: 8px;"><span class="mark" title="{{a.label}}: {{a.n}} events" style="display: block; height: 14px; width: {{a.w}}px; background: #2563EB; border-radius: 0 4px 4px 0;"></span><span class="mono" style="font-weight: 600;">{{a.n}}</span></span>
+          </div>
+        </sc-for>
+      </section>
+      <section aria-label="Events by bid" class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;"><h2 class="h2">Events per bid</h2><span style="font-size: 12px; color: #64748B;">Includes tender-level events recorded on each bid</span></div>
+        <sc-for list="{{perBid}}" as="a" hint-placeholder-count="4">
+          <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: center; font-size: 12px;">
+            <span style="font-weight: 600;">{{a.label}}</span>
+            <span style="display: flex; align-items: center; gap: 8px;"><span class="mark" title="{{a.label}}: {{a.n}} events" style="display: block; height: 14px; width: {{a.w}}px; background: #2563EB; border-radius: 0 4px 4px 0;"></span><span class="mono" style="font-weight: 600;">{{a.n}}</span></span>
+          </div>
+        </sc-for>
+      </section>
+    </div>
+
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <label for="a-bid" style="position: absolute; width: 1px; height: 1px; overflow: hidden;">Bid</label>
+      <select id="a-bid" class="input" style="width: 220px;"><option>PQR Industries Ltd</option><option>All bids</option></select>
+      <label for="a-actor" style="position: absolute; width: 1px; height: 1px; overflow: hidden;">Actor</label>
+      <select id="a-actor" class="input" style="width: 180px;"><option>All actors</option><option>Officers</option><option>Engines</option><option>Bidder</option></select>
+      <span style="margin-left: auto; font-size: 12px; color: #64748B;">8 events · newest last</span>
+    </div>
+
+    <section aria-label="Event log" class="card" style="overflow: hidden;">
+      <sc-for list="{{events}}" as="e" hint-placeholder-count="8">
+        <div class="tr" style="display: grid; grid-template-columns: 150px 24px minmax(0, 1.2fr) minmax(0, 2fr); gap: 14px; align-items: start; padding: 14px 20px; font-size: 12px;">
+          <span class="mono" style="color: #475569;">{{e.t}}</span>
+          <span class="dot" style="margin-top: 4px; background: {{e.dot}}; box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 3px {{e.dot}};"></span>
+          <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600; font-size: 13px;">{{e.a}}</span><span style="color: #64748B;">{{e.who}}</span></span>
+          <span style="color: #334155;">{{e.d}}</span>
+        </div>
+      </sc-for>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const scale = 22;
+    const actors = [
+      { label: 'Automated engines', sub: 'Compliance, verifier, advisory, audit', n: 16 },
+      { label: 'Tender authority', sub: 'Officers and tender office', n: 6 },
+      { label: 'Bidders', sub: 'Authorised signatories', n: 4 }
+    ].map((a) => ({ ...a, w: a.n * scale }));
+    const perBid = [
+      { label: 'Apex Heavy', n: 8 }, { label: 'PQR Industries', n: 8 },
+      { label: 'XYZ Engineering', n: 6 }, { label: 'ABC Industrial', n: 4 }
+    ].map((a) => ({ ...a, w: a.n * scale * 2 }));
+    const ink = '#2563EB', eng = '#94A3B8';
+    const events = [
+      ['01 Sep 09:15 IST', 'Tender published', 'CPCL Tenders Directorate', 'Notice inviting tender published with 10 qualification clauses.', ink],
+      ['07 Sep 16:20 IST', 'Bid package sealed', 'PQR Industries Ltd', 'Bid CL-2026-44B129E8 sealed with a SHA-256 checksum.', ink],
+      ['07 Sep 16:25 IST', 'Evidence extracted', 'Extraction engine', 'Values read from the submitted documents with page citations.', eng],
+      ['07 Sep 16:26 IST', 'Turnover contradiction', 'Cross-document engine', 'Declared ₹12.40 Cr vs audited ₹8.72 Cr.', eng],
+      ['07 Sep 16:27 IST', 'OEM mismatch', 'Cross-document engine', 'Authorization issued by XYZ Corp, not the required manufacturer.', eng],
+      ['07 Sep 16:28 IST', 'Missing mandatory document', 'Compliance engine', 'Annexure-B non-blacklisting affidavit not attached.', eng],
+      ['07 Sep 16:29 IST', 'Rule-by-rule evaluation', 'Compliance engine', 'Score 30/100, 5 of 9 mandatory clauses met, risk critical.', eng],
+      ['07 Sep 16:30 IST', 'AI recommendation', 'Advisory engine', 'Recommended: non-compliant. Awaiting officer decision.', eng]
+    ].map(([t, a, who, d, dot]) => ({ t, a, who, d, dot }));
+    return { navH: 1120, actors, perBid, events };
+  }
+}
+</script>
+</body>
+</html>

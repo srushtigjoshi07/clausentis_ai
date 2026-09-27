@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Document vault</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 1100px; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A; display: flex; flex-direction: column;">
+  <dc-import name="BidderNav" active="vault" hint-size="1440px,64px"></dc-import>
+  <main style="box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px;">
+    <header style="display: flex; justify-content: space-between; align-items: flex-end;">
+      <div style="display: flex; flex-direction: column; gap: 8px;"><span class="eyebrow">Document vault</span><h1 class="h1">Upload once, reuse in every bid</h1></div>
+      <a href="#" class="btn btn-primary">Upload document</a>
+    </header>
+
+    <section aria-label="Validity timeline" class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; gap: 4px;"><h2 class="h2">Validity against upcoming closing dates</h2><span style="font-size: 12px; color: #64748B;">Next six months · today 26 Sep 2026</span></div>
+        <span style="display: flex; gap: 14px; font-size: 11px; color: #475569;">
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-ink"></span>Valid</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-review"></span>Expires in window</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 2px; height: 12px; background: #94A3B8;"></span>Tender closes</span>
+        </span>
+      </div>
+      <svg width="1320" height="236" viewBox="0 0 1320 236" role="img" aria-label="ISO 9001 valid until 30 November 2026; OEM authorization, GST, PAN and Udyam valid beyond March 2027">
+        <sc-for list="{{months}}" as="m" hint-placeholder-count="7">
+          <text x="{{m.x}}" y="14" class="axis" text-anchor="middle">{{m.l}}</text>
+        </sc-for>
+        <sc-for list="{{closes}}" as="c" hint-placeholder-count="4">
+          <g><title>{{c.tip}}</title><line x1="{{c.x}}" y1="22" x2="{{c.x}}" y2="222" stroke="#CBD5E1" stroke-width="1"></line><text x="{{c.x}}" y="234" class="axis" text-anchor="middle">{{c.l}}</text></g>
+        </sc-for>
+        <line x1="{{todayX}}" y1="22" x2="{{todayX}}" y2="222" stroke="#0F172A" stroke-width="1.5"></line>
+        <sc-for list="{{docs}}" as="d" hint-placeholder-count="5">
+          <g class="mark">
+            <title>{{d.tip}}</title>
+            <text x="0" y="{{d.ty}}" class="clabel" style="font-weight: 600;">{{d.n}}</text>
+            <rect x="{{todayX}}" y="{{d.y}}" width="{{d.w}}" height="16" fill="{{d.fill}}"></rect>
+            <text x="{{d.lx}}" y="{{d.ty}}" class="axis" style="fill: #334155;">{{d.end}}</text>
+          </g>
+        </sc-for>
+      </svg>
+    </section>
+
+    <section aria-label="Documents" class="card" style="overflow: hidden;">
+      <div class="th" style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 150px 110px 110px; gap: 16px; padding: 12px 20px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0;">
+        <span>Document</span><span>Type</span><span>Valid until</span><span>Used in</span><span>Integrity</span>
+      </div>
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="8">
+        <div class="tr" style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1.4fr) 150px 110px 110px; gap: 16px; align-items: center; padding: 10px 20px; font-size: 12px;">
+          <span class="mono">{{r.f}}</span><span style="color: #334155;">{{r.t}}</span><span>{{r.v}}</span><span>{{r.u}}</span><span><span class="pill {{r.cls}}">{{r.i}}</span></span>
+        </div>
+      </sc-for>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1100}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // x scale: 26 Sep 2026 → 26 Mar 2027 (181 days) mapped to 220..1260
+    const X0 = 220, X1 = 1260, D = 181;
+    const x = (day) => X0 + (day / D) * (X1 - X0);
+    const months = [['OCT', 5], ['NOV', 36], ['DEC', 66], ['JAN', 97], ['FEB', 128], ['MAR', 156]].map(([l, d]) => ({ l, x: x(d) }));
+    const closes = [['CPCL', 2, '28 Sep'], ['IOCL', 9, '5 Oct'], ['BHEL', 18, '14 Oct'], ['NTPC', 26, '22 Oct']].map(([org, d, date], i) => ({ x: x(d), l: i % 2 ? '' : org, tip: `${org} closes ${date}` }));
+    const docs = [
+      ['ISO 9001:2015 certificate', 65, 'Expires 30 Nov 2026', '#F59E0B'],
+      ['OEM authorization (MAF)', D, 'To 31 Dec 2028', '#2563EB'],
+      ['GST registration', D, 'No expiry', '#2563EB'],
+      ['PAN', D, 'No expiry', '#2563EB'],
+      ['Udyam certificate', D, 'No expiry', '#2563EB']
+    ].map(([n, days, end, fill], i) => {
+      const y = 36 + i * 36;
+      const w = x(days) - X0;
+      const lx = days < D ? X0 + w + 8 : X1 - 110;
+      return { n, y, ty: y + 12, w: days < D ? w : w - 120, fill, end, lx, tip: `${n}: ${end}` };
+    });
+    const rows = [
+      ['Financial_Statement.pdf', 'Audited financials FY 2023-24', '—', '1 bid', 'Hashed', 'pill-neutral'],
+      ['Experience_Certificate.pdf', 'Completion certificates', '—', '1 bid', 'Hashed', 'pill-neutral'],
+      ['GST_Certificate.pdf', 'GST REG-06', 'No expiry', '1 bid', 'Hashed', 'pill-neutral'],
+      ['PAN_Document.pdf', 'PAN card', 'No expiry', '1 bid', 'Hashed', 'pill-neutral'],
+      ['Udyam_Certificate.pdf', 'Udyam registration', 'No expiry', '1 bid', 'Hashed', 'pill-neutral'],
+      ['OEM_Authorization.pdf', 'Manufacturer authorization', '31 Dec 2028', '1 bid', 'Hashed', 'pill-neutral'],
+      ['ISO_Quality_Certificate.pdf', 'ISO 9001:2015', '30 Nov 2026', '1 bid', 'Hashed', 'pill-neutral'],
+      ['Local_Content_Declaration.pdf', 'Make in India declaration', '—', '1 bid', 'Hashed', 'pill-neutral']
+    ].map(([f, t, v, u, i, cls]) => ({ f, t, v, u, i, cls }));
+    return { months, closes, docs, rows, todayX: X0 };
+  }
+}
+</script>
+</body>
+</html>

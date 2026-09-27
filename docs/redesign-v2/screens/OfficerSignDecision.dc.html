@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign decision</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}
+.opt{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid #E2E8F0;border-radius:6px;cursor:pointer}
+.opt-on{border-color: #2563EB;background:#F8FAFC}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1000px; position: relative; display: flex; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A;">
+  <dc-import name="OfficerNav" active="reviews" height="{{navH}}" hint-size="240px,1000px"></dc-import>
+  <div aria-hidden="true" style="flex-grow: 1; box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 16px;">
+    <span class="eyebrow">Bid review</span>
+    <span class="h1">PQR Industries Ltd</span>
+    <span style="display: block; height: 180px; border: 1px solid #E2E8F0; border-radius: 8px;"></span>
+    <span style="display: block; height: 520px; border: 1px solid #E2E8F0; border-radius: 8px;"></span>
+  </div>
+  <div style="position: absolute; left: 0; top: 0; width: 1440px; height: 1000px; background: rgba(15,23,42,0.55);"></div>
+
+  <section role="dialog" aria-modal="true" aria-labelledby="dlg-title" style="position: absolute; left: 470px; top: 64px; width: 620px; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; box-shadow: 0 24px 48px rgba(0,0,0,0.18); display: flex; flex-direction: column;">
+    <div style="padding: 22px 24px 16px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #E2E8F0;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="eyebrow">Record qualification decision</span>
+        <h2 id="dlg-title" style="margin: 0; font-size: 22px; font-weight: 600; font-family: Lexend, sans-serif; letter-spacing: -0.01em;">PQR Industries Ltd · CL-2026-44B129E8</h2>
+      </div>
+      <a href="OfficerBidReview.dc.html" aria-label="Close" style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 6px; border: 1px solid #E2E8F0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0F172A" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></a>
+    </div>
+
+    <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 18px;">
+      <div class="panel" style="padding: 12px 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
+        <span style="display: flex; flex-direction: column; gap: 4px;"><span class="th">Engine score</span><span style="font-size: 18px; font-weight: 600;">30 / 100</span></span>
+        <span style="display: flex; flex-direction: column; gap: 4px;"><span class="th">Risk</span><span><span class="pill pill-critical">Critical</span></span></span>
+        <span style="display: flex; flex-direction: column; gap: 4px;"><span class="th">AI advice</span><span style="font-size: 14px; font-weight: 600;">Non-compliant</span></span>
+      </div>
+
+      <fieldset style="margin: 0; padding: 0; border: none; display: flex; flex-direction: column; gap: 8px;">
+        <legend class="label" style="margin-bottom: 8px;">Your decision</legend>
+        <sc-for list="{{options}}" as="o" hint-placeholder-count="4">
+          <label class="opt {{o.cls}}">
+            <input type="radio" name="decision" value="{{o.id}}" checked="{{o.on}}" onChange="{{o.pick}}" style="margin-top: 3px;">
+            <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 14px; font-weight: 600;">{{o.label}}</span><span style="font-size: 12px; color: #475569;">{{o.hint}}</span></span>
+          </label>
+        </sc-for>
+      </fieldset>
+
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <label for="reasons" class="label">Reasons for the record</label>
+        <textarea id="reasons" rows="3" style="box-sizing: border-box; width: 100%; padding: 10px 12px; border: 1px solid #E2E8F0; border-radius: 6px; font-family: inherit; font-size: 13px; resize: vertical;">Fails Clauses 4.1, 4.2 and 5.1. Annexure-B not submitted. Debarment order confirmed on registry.</textarea>
+        <span style="font-size: 11px; color: #64748B;">Required. Bidders see the decision, not these notes.</span>
+      </div>
+
+      <div style="display: flex; gap: 10px; align-items: flex-start; font-size: 12px; color: #475569;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><rect x="4" y="10" width="16" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 018 0v3"></path></svg>
+        <span>Signing seals your name, the time, this snapshot and your reasons with a SHA-256 hash in the audit trail. A signed decision can't be edited; you can only record a new version.</span>
+      </div>
+    </div>
+
+    <div style="padding: 16px 24px; border-top: 1px solid #E2E8F0; display: flex; justify-content: flex-end; gap: 8px;">
+      <a href="OfficerBidReview.dc.html" class="btn btn-secondary">Cancel</a>
+      <a href="OfficerAuditTrail.dc.html" class="btn btn-primary">Sign &amp; seal decision</a>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { picked: 'reject' }; }
+  renderVals() {
+    const picked = this.state.picked;
+    const opts = [
+      ['approve', 'Qualify', 'Bid proceeds to commercial opening.'],
+      ['reject', 'Disqualify', 'Bid is rejected at technical evaluation.'],
+      ['clarify', 'Seek clarification', 'Bidder gets a query; the bid stays open.'],
+      ['review', 'Refer to committee', 'Hold for the tender evaluation committee.']
+    ];
+    return {
+      navH: 1000,
+      options: opts.map(([id, label, hint]) => ({
+        id, label, hint, on: id === picked, cls: id === picked ? 'opt-on' : '',
+        pick: () => this.setState({ picked: id })
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

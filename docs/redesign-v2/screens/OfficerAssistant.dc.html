@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Assistant</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 900px; display: flex; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A;">
+  <dc-import name="OfficerNav" active="assistant" height="{{navH}}" hint-size="240px,900px"></dc-import>
+  <main style="flex-grow: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) 320px;">
+    <section aria-label="Conversation" style="box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 18px; border-right: 1px solid #E2E8F0;">
+      <header style="display: flex; flex-direction: column; gap: 8px;">
+        <span class="eyebrow">Assistant · grounded in CPCL/ENG/2026/HPGC-0412</span>
+        <h1 class="h1" style="font-size: 26px;">Ask about bids, clauses or evidence</h1>
+      </header>
+
+      <div style="display: flex; flex-direction: column; gap: 16px; flex-grow: 1;">
+        <div style="align-self: flex-end; max-width: 560px; padding: 12px 14px; border-radius: 8px; background: #2563EB; color: #FFFFFF; font-size: 14px;">Why is XYZ Engineering high risk when it scored 91?</div>
+        <div style="max-width: 720px; display: flex; flex-direction: column; gap: 10px;">
+          <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; line-height: 1.6;">
+            <span>XYZ meets 8 of 9 mandatory clauses, which is why its score is high. The risk is high because the one it misses is <strong>mandatory</strong>: the non-blacklisting affidavit (Clause 3.4) was not attached.</span>
+            <span>Two further points to confirm before deciding:</span>
+            <ul style="margin: 0; padding-left: 18px;">
+              <li>Clause 5.1 is marked met, but the evidence reads "Pending OEM undertaking".</li>
+              <li>ISO 9001 is valid to 15 Oct 2026, which covers bid closing but not the full contract.</li>
+            </ul>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <span style="font-size: 11px; color: #64748B; align-self: center;">From the bid record:</span>
+            <a href="OfficerBidReview.dc.html" class="pill pill-neutral" style="text-decoration: none;">Clause 3.4 · missing</a>
+            <a href="OfficerBidReview.dc.html" class="pill pill-neutral" style="text-decoration: none;">Clause 5.1 · evidence</a>
+            <a href="OfficerBidReview.dc.html" class="pill pill-neutral" style="text-decoration: none;">Clause 8.2 · validity</a>
+          </div>
+          <span style="font-size: 11px; color: #64748B;">Advice only. The decision stays with you.</span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <label for="ask" style="position: absolute; width: 1px; height: 1px; overflow: hidden;">Ask the assistant</label>
+        <input id="ask" class="input" placeholder="Ask about a bid, clause or document" style="height: 44px;">
+        <button type="button" class="btn btn-primary" style="height: 44px;">Ask</button>
+      </div>
+    </section>
+
+    <aside style="box-sizing: border-box; padding: 32px 24px; display: flex; flex-direction: column; gap: 16px; background: #F8FAFC;">
+      <span class="eyebrow">Suggested</span>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button type="button" class="btn btn-secondary" style="justify-content: flex-start; height: auto; min-height: 44px; padding: 10px 12px; white-space: normal; text-align: left; font-weight: 500;">Which clauses do most bids fail?</button>
+        <button type="button" class="btn btn-secondary" style="justify-content: flex-start; height: auto; min-height: 44px; padding: 10px 12px; white-space: normal; text-align: left; font-weight: 500;">Draft a clarification request to XYZ Engineering</button>
+        <button type="button" class="btn btn-secondary" style="justify-content: flex-start; height: auto; min-height: 44px; padding: 10px 12px; white-space: normal; text-align: left; font-weight: 500;">Summarise PQR's contradictions for the committee</button>
+      </div>
+      <div class="card" style="padding: 14px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #475569;">
+        <span class="label">What the assistant can see</span>
+        <span>This tender's clauses, the 4 bids, their extracted evidence and portal results. It cites records, never invents documents.</span>
+      </div>
+    </aside>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return { navH: 900 }; }
+}
+</script>
+</body>
+</html>

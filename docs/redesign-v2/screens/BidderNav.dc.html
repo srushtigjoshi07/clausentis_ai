@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bidder navigation</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<header style="width: 1440px; height: 64px; box-sizing: border-box; padding: 0 40px; border-bottom: 1px solid #E2E8F0; background: #FFFFFF; display: flex; align-items: center; gap: 40px; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A;">
+  <a href="BidderHome.dc.html" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
+    <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: #2563EB;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4v5c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V7l8-4z"></path><path d="M8.5 12l2.5 2.5 4.5-5"></path></svg>
+    </span>
+    <span style="font-family: Lexend, sans-serif; font-size: 15px; font-weight: 700; letter-spacing: .06em;">CLAUSENTIS</span>
+    <span class="pill pill-neutral">Bidder</span>
+  </a>
+  <nav aria-label="Bidder portal" style="display: flex; gap: 28px; height: 64px; align-items: stretch;">
+    <sc-for list="{{items}}" as="it" hint-placeholder-count="5">
+      <a href="{{it.href}}" class="tab {{it.cls}}" style="height: 64px; text-decoration: none;">{{it.label}}</a>
+    </sc-for>
+  </nav>
+  <div style="margin-left: auto; display: flex; align-items: center; gap: 16px;">
+    <a href="BidderSettings.dc.html" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
+      <span style="display: flex; flex-direction: column; align-items: flex-end;">
+        <span style="font-size: 12px; font-weight: 600;">Apex Heavy Engineering Pvt Ltd</span>
+        <span class="mono" style="font-size: 11px; color: #64748B;">33AABCA1234F1Z8</span>
+      </span>
+      <span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 16px; background: #F1F5F9; border: 1px solid #E2E8F0; font-size: 11px; font-weight: 700;">AH</span>
+    </a>
+  </div>
+</header>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["home","tenders","bids","vault","assistant"],"default":"home"},"$preview":{"width":1440,"height":64}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const active = this.props.active ?? 'home';
+    const mk = (id, label, href) => ({ label, href, cls: id === active ? 'tab-on' : '' });
+    return {
+      items: [
+        mk('home', 'Home', 'BidderHome.dc.html'),
+        mk('tenders', 'Find tenders', 'BidderFindTenders.dc.html'),
+        mk('bids', 'My bids', 'BidderMyBids.dc.html'),
+        mk('vault', 'Document vault', 'BidderVault.dc.html'),
+        mk('assistant', 'Assistant', 'BidderAssistant.dc.html')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

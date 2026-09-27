@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>My bids</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}
+.stage{display:flex;flex-direction:column;gap:4px;flex:1 1 0}
+.bar{height:4px;border-radius:2px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 820px; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A; display: flex; flex-direction: column;">
+  <dc-import name="BidderNav" active="bids" hint-size="1440px,64px"></dc-import>
+  <main style="box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px;">
+    <header style="display: flex; justify-content: space-between; align-items: flex-end;">
+      <div style="display: flex; flex-direction: column; gap: 8px;"><span class="eyebrow">My bids</span><h1 class="h1">Where each bid stands</h1></div>
+      <a href="BidderFindTenders.dc.html" class="btn btn-primary">Start a new bid</a>
+    </header>
+
+    <section aria-label="Bids" class="card" style="overflow: hidden;">
+      <div class="th" style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 2.2fr) 90px 140px 120px; gap: 16px; padding: 12px 20px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0;">
+        <span>Tender</span><span>Progress</span><span>Score</span><span>Decision</span><span></span>
+      </div>
+      <sc-for list="{{bids}}" as="b" hint-placeholder-count="2">
+        <div class="tr" style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 2.2fr) 90px 140px 120px; gap: 16px; align-items: center; padding: 18px 20px;">
+          <span style="display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 14px; font-weight: 600;">{{b.t}}</span><span class="mono" style="font-size: 11px; color: #64748B;">{{b.ref}}</span></span>
+          <span style="display: flex; gap: 6px;">
+            <sc-for list="{{b.stages}}" as="s" hint-placeholder-count="4">
+              <span class="stage"><span class="bar" style="background: {{s.bg}};"></span><span style="font-size: 11px; color: {{s.fg}};">{{s.l}}</span></span>
+            </sc-for>
+          </span>
+          <span class="mono" style="font-size: 14px; font-weight: 600;">{{b.score}}</span>
+          <span><span class="pill {{b.cls}}">{{b.dec}}</span></span>
+          <a href="{{b.href}}" class="btn btn-secondary" style="height: 32px; font-size: 12px;">{{b.cta}}</a>
+        </div>
+      </sc-for>
+    </section>
+    <p style="margin: 0; font-size: 12px; color: #64748B;">Filled segments are completed stages. Scores are your latest readiness check.</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":820}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const labels = ['Prepared', 'Submitted', 'Verified', 'Decided'];
+    const stages = (n) => labels.map((l, i) => ({ l, bg: i < n ? '#2563EB' : '#E2E8F0', fg: i < n ? '#2563EB' : '#64748B' }));
+    const bids = [
+      { t: 'High-Pressure Gas Compressor System', ref: 'CPCL/ENG/2026/HPGC-0412 · CL-2026-91C25F34', stages: stages(4), score: '100', dec: 'Qualified', cls: 'pill-pass', cta: 'Receipt', href: 'BidderSubmitted.dc.html' },
+      { t: 'Annual maintenance of DCS & instrumentation', ref: 'IOCL/RHQ/INST/2026/AMC-882 · draft', stages: stages(1), score: '—', dec: 'Not submitted', cls: 'pill-neutral', cta: 'Continue', href: 'BidderPrepareBid.dc.html' }
+    ];
+    return { bids };
+  }
+}
+</script>
+</body>
+</html>

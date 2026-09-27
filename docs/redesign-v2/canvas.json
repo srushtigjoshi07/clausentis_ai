@@ -1,0 +1,302 @@
+{
+ "v": 3,
+ "attachments": {},
+ "boards": {
+  "BidderAssistant.dc.html": {
+   "h": 900,
+   "is_interactive": true,
+   "title": "B8 \u00b7 Assistant",
+   "w": 1440,
+   "x": 4560,
+   "y": 9700
+  },
+  "BidderFindTenders.dc.html": {
+   "h": 940,
+   "is_interactive": true,
+   "title": "B2 \u00b7 Find tenders",
+   "w": 1440,
+   "x": 1520,
+   "y": 8340
+  },
+  "BidderHome.dc.html": {
+   "h": 1060,
+   "is_interactive": true,
+   "title": "B1 \u00b7 Home",
+   "w": 1440,
+   "x": 0,
+   "y": 8340
+  },
+  "BidderMyBids.dc.html": {
+   "h": 820,
+   "is_interactive": true,
+   "title": "B6 \u00b7 My bids",
+   "w": 1440,
+   "x": 1520,
+   "y": 9700
+  },
+  "BidderNav.dc.html": {
+   "h": 64,
+   "title": "Bidder top bar",
+   "w": 1440,
+   "x": 320,
+   "y": 12340
+  },
+  "BidderPrepareBid.dc.html": {
+   "h": 1240,
+   "is_interactive": true,
+   "title": "B4 \u00b7 Prepare & check bid",
+   "w": 1440,
+   "x": 4560,
+   "y": 8340
+  },
+  "BidderSettings.dc.html": {
+   "h": 1000,
+   "is_interactive": true,
+   "title": "B9 \u00b7 Company profile",
+   "w": 1440,
+   "x": 0,
+   "y": 10920
+  },
+  "BidderSubmitted.dc.html": {
+   "h": 1000,
+   "is_interactive": true,
+   "title": "B5 \u00b7 Submitted receipt",
+   "w": 1440,
+   "x": 0,
+   "y": 9700
+  },
+  "BidderTenderDetail.dc.html": {
+   "h": 1080,
+   "is_interactive": true,
+   "title": "B3 \u00b7 Tender & eligibility",
+   "w": 1440,
+   "x": 3040,
+   "y": 8340
+  },
+  "BidderVault.dc.html": {
+   "h": 1100,
+   "is_interactive": true,
+   "title": "B7 \u00b7 Document vault",
+   "w": 1440,
+   "x": 3040,
+   "y": 9700
+  },
+  "ForgotPassword.dc.html": {
+   "h": 900,
+   "is_interactive": true,
+   "title": "P4 \u00b7 Reset password",
+   "w": 1440,
+   "x": 4560,
+   "y": 1600
+  },
+  "Landing.dc.html": {
+   "h": 1560,
+   "is_interactive": true,
+   "title": "P1 \u00b7 Landing",
+   "w": 1440,
+   "x": 0,
+   "y": 1600
+  },
+  "Main.dc.html": {
+   "h": 1180,
+   "is_interactive": true,
+   "title": "App flow v2",
+   "w": 1440,
+   "x": 0,
+   "y": 0
+  },
+  "OfficerAssistant.dc.html": {
+   "h": 900,
+   "is_interactive": true,
+   "title": "A10 \u00b7 Assistant",
+   "w": 1440,
+   "x": 1520,
+   "y": 6780
+  },
+  "OfficerAuditTrail.dc.html": {
+   "h": 1120,
+   "is_interactive": true,
+   "title": "A8 \u00b7 Audit trail",
+   "w": 1440,
+   "x": 4560,
+   "y": 4860
+  },
+  "OfficerBidReview.dc.html": {
+   "h": 1800,
+   "is_interactive": true,
+   "title": "A5 \u00b7 Bid review",
+   "w": 1440,
+   "x": 0,
+   "y": 4860
+  },
+  "OfficerIntegrations.dc.html": {
+   "h": 1140,
+   "is_interactive": true,
+   "title": "A11 \u00b7 Data sources",
+   "w": 1440,
+   "x": 3040,
+   "y": 6780
+  },
+  "OfficerNav.dc.html": {
+   "h": 900,
+   "title": "Officer sidebar",
+   "w": 240,
+   "x": 0,
+   "y": 12340
+  },
+  "OfficerNewTender.dc.html": {
+   "h": 1000,
+   "is_interactive": true,
+   "title": "A3 \u00b7 Publish tender",
+   "w": 1440,
+   "x": 3040,
+   "y": 3580
+  },
+  "OfficerOverview.dc.html": {
+   "h": 1140,
+   "is_interactive": true,
+   "title": "A1 \u00b7 Overview",
+   "w": 1440,
+   "x": 0,
+   "y": 3580
+  },
+  "OfficerPortalVerification.dc.html": {
+   "h": 1120,
+   "is_interactive": true,
+   "title": "A7 \u00b7 Portal verification",
+   "w": 1440,
+   "x": 3040,
+   "y": 4860
+  },
+  "OfficerReports.dc.html": {
+   "h": 960,
+   "is_interactive": true,
+   "title": "A9 \u00b7 Reports",
+   "w": 1440,
+   "x": 0,
+   "y": 6780
+  },
+  "OfficerSettings.dc.html": {
+   "h": 900,
+   "is_interactive": true,
+   "title": "A12 \u00b7 Settings",
+   "w": 1440,
+   "x": 4560,
+   "y": 6780
+  },
+  "OfficerSignDecision.dc.html": {
+   "h": 1000,
+   "is_interactive": true,
+   "title": "A6 \u00b7 Sign decision",
+   "w": 1440,
+   "x": 1520,
+   "y": 4860
+  },
+  "OfficerTenderWorkspace.dc.html": {
+   "h": 1160,
+   "is_interactive": true,
+   "title": "A4 \u00b7 Tender workspace",
+   "w": 1440,
+   "x": 4560,
+   "y": 3580
+  },
+  "OfficerTenders.dc.html": {
+   "h": 900,
+   "is_interactive": true,
+   "title": "A2 \u00b7 Tenders",
+   "w": 1440,
+   "x": 1520,
+   "y": 3580
+  },
+  "SignIn.dc.html": {
+   "h": 900,
+   "is_interactive": true,
+   "title": "P2 \u00b7 Sign in",
+   "w": 1440,
+   "x": 1520,
+   "y": 1600
+  },
+  "SignUp.dc.html": {
+   "h": 960,
+   "is_interactive": true,
+   "title": "P3 \u00b7 Register as bidder",
+   "w": 1440,
+   "x": 3040,
+   "y": 1600
+  }
+ },
+ "createdOnFiles": {
+  "at": "2026-09-26T18:00:00Z",
+  "v": 1
+ },
+ "designSystems": [],
+ "launch": {
+  "view": "canvas"
+ },
+ "notes": {
+  "publicTitle": {
+   "kind": "title1",
+   "maxW": 6000,
+   "text": "Public entry",
+   "w": 240,
+   "x": 0,
+   "y": 1300
+  },
+  "officerTitle": {
+   "kind": "title1",
+   "maxW": 6000,
+   "text": "Procurement officer: publish \u2192 evaluate \u2192 verify \u2192 decide \u2192 record",
+   "w": 240,
+   "x": 0,
+   "y": 3280
+  },
+  "bidderTitle": {
+   "kind": "title1",
+   "maxW": 6000,
+   "text": "Bidder: find \u2192 check \u2192 fix \u2192 submit \u2192 track",
+   "w": 240,
+   "x": 0,
+   "y": 8040
+  },
+  "componentsTitle": {
+   "kind": "title1",
+   "maxW": 1760,
+   "text": "Shared components",
+   "w": 240,
+   "x": 0,
+   "y": 12040
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Landing.dc.html",
+  "SignIn.dc.html",
+  "SignUp.dc.html",
+  "ForgotPassword.dc.html",
+  "OfficerOverview.dc.html",
+  "OfficerTenders.dc.html",
+  "OfficerNewTender.dc.html",
+  "OfficerTenderWorkspace.dc.html",
+  "OfficerBidReview.dc.html",
+  "OfficerSignDecision.dc.html",
+  "OfficerPortalVerification.dc.html",
+  "OfficerAuditTrail.dc.html",
+  "OfficerReports.dc.html",
+  "OfficerAssistant.dc.html",
+  "OfficerIntegrations.dc.html",
+  "OfficerSettings.dc.html",
+  "BidderHome.dc.html",
+  "BidderFindTenders.dc.html",
+  "BidderTenderDetail.dc.html",
+  "BidderPrepareBid.dc.html",
+  "BidderSubmitted.dc.html",
+  "BidderMyBids.dc.html",
+  "BidderVault.dc.html",
+  "BidderAssistant.dc.html",
+  "BidderSettings.dc.html",
+  "OfficerNav.dc.html",
+  "BidderNav.dc.html"
+ ],
+ "pages": [],
+ "title": "Clausentis App Redesign"
+}

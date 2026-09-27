@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Find tenders</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 940px; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A; display: flex; flex-direction: column;">
+  <dc-import name="BidderNav" active="tenders" hint-size="1440px,64px"></dc-import>
+  <main style="box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px;">
+    <header style="display: flex; flex-direction: column; gap: 8px;">
+      <span class="eyebrow">Find tenders</span>
+      <h1 class="h1">Open tenders, matched to your company</h1>
+    </header>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <label for="f-q" style="position: absolute; width: 1px; height: 1px; overflow: hidden;">Search</label>
+      <input id="f-q" class="input" placeholder="Search by keyword, organisation or reference" style="width: 420px;">
+      <label for="f-cat" style="position: absolute; width: 1px; height: 1px; overflow: hidden;">Category</label>
+      <select id="f-cat" class="input" style="width: 160px;"><option>All categories</option><option>Goods</option><option>Services</option><option>Works</option></select>
+      <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; min-height: 40px; margin-left: 8px;"><input type="checkbox"> Only tenders I qualify for</label>
+      <span style="margin-left: auto; font-size: 12px; color: #64748B;">4 open · source: CPPP (imported)</span>
+    </div>
+
+    <section aria-label="Tenders" class="card" style="overflow: hidden;">
+      <div class="th" style="display: grid; grid-template-columns: minmax(0, 2.4fr) 110px 200px 200px 120px; gap: 16px; padding: 12px 20px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0;">
+        <span>Tender</span><span>Closes</span><span>Turnover: need vs you</span><span>Experience: need vs you</span><span>Match</span>
+      </div>
+      <sc-for list="{{rows}}" as="r" hint-placeholder-count="4">
+        <a href="BidderTenderDetail.dc.html" class="tr" style="display: grid; grid-template-columns: minmax(0, 2.4fr) 110px 200px 200px 120px; gap: 16px; align-items: center; padding: 16px 20px; color: #0F172A; text-decoration: none;">
+          <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+            <span class="mono" style="font-size: 11px; color: #64748B;">{{r.ref}}</span>
+            <span style="font-size: 14px; font-weight: 600; line-height: 1.35;">{{r.title}}</span>
+            <span style="font-size: 12px; color: #475569;">{{r.org}} · {{r.cat}} · {{r.value}}</span>
+          </span>
+          <span style="font-size: 13px;">{{r.close}}</span>
+          <span style="display: flex; flex-direction: column; gap: 4px;">
+            <svg width="180" height="16" viewBox="0 0 180 16" role="img" aria-label="{{r.tAria}}">
+              <title>{{r.tAria}}</title>
+              <rect x="0" y="4" width="180" height="8" fill="#EEF2F7"></rect>
+              <rect x="0" y="4" width="{{r.tYou}}" height="8" fill="#2563EB"></rect>
+              <line x1="{{r.tNeed}}" y1="0" x2="{{r.tNeed}}" y2="16" stroke="{{r.tLine}}" stroke-width="2"></line>
+            </svg>
+            <span class="mono" style="font-size: 11px; color: #475569;">{{r.tText}}</span>
+          </span>
+          <span style="display: flex; flex-direction: column; gap: 4px;">
+            <svg width="180" height="16" viewBox="0 0 180 16" role="img" aria-label="{{r.eAria}}">
+              <title>{{r.eAria}}</title>
+              <rect x="0" y="4" width="180" height="8" fill="#EEF2F7"></rect>
+              <rect x="0" y="4" width="{{r.eYou}}" height="8" fill="#2563EB"></rect>
+              <line x1="{{r.eNeed}}" y1="0" x2="{{r.eNeed}}" y2="16" stroke="#B91C1C" stroke-width="2"></line>
+            </svg>
+            <span class="mono" style="font-size: 11px; color: #475569;">{{r.eText}}</span>
+          </span>
+          <span><span class="pill {{r.cls}}">{{r.match}}</span></span>
+        </a>
+      </sc-for>
+    </section>
+    <p style="margin: 0; display: flex; align-items: center; gap: 16px; font-size: 12px; color: #475569;">
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-ink"></span>You (from your profile)</span>
+      <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="display: inline-block; width: 2px; height: 12px; background: #B91C1C;"></span>Tender minimum</span>
+      <span>Turnover scale ₹0–30 Cr · experience scale 0–10 years. Your documents are checked later, when you prepare the bid.</span>
+    </p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":940}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const you = { t: 12.4, e: 8 };
+    const tS = (v) => Math.min(180, (v / 30) * 180), eS = (v) => Math.min(180, (v / 10) * 180);
+    const rows = [
+      ['IOCL/RHQ/INST/2026/AMC-882', 'Comprehensive Annual Maintenance Contract for DCS & Field Instrumentation', 'Indian Oil Corporation Ltd', 'Services', '₹8.20 Cr', '5 Oct 2026', 6, 4],
+      ['CPCL/ENG/2026/HPGC-0412', 'High-Pressure Gas Compressor System at Manali Refinery', 'Chennai Petroleum Corporation Ltd', 'Goods', '₹14.50 Cr', '28 Sep 2026', 10, 5],
+      ['BHEL/PSWR/PUR/ST-2026-904', 'Boiler Quality Steel Plates (SA 516 Gr 70)', 'Bharat Heavy Electricals Ltd', 'Goods', '₹22.00 Cr', '14 Oct 2026', 15, 7],
+      ['NTPC/CC/CS-2026/FGD-119', 'Civil, Structural & Architectural Works for FGD System', 'NTPC Ltd', 'Works', '₹35.80 Cr', '22 Oct 2026', 25, 6]
+    ].map(([ref, title, org, cat, value, close, t, e]) => {
+      const ok = you.t >= t && you.e >= e;
+      const short = [you.t < t ? `turnover ₹${(t - you.t).toFixed(2)} Cr short` : null, you.e < e ? 'experience short' : null].filter(Boolean);
+      return {
+        ref, title, org, cat, value, close,
+        tYou: tS(you.t), tNeed: tS(t), tLine: '#B91C1C', tText: `₹${t} Cr vs ₹${you.t} Cr`, tAria: `Turnover required ₹${t} Cr, yours ₹${you.t} Cr`,
+        eYou: eS(you.e), eNeed: eS(e), eText: `${e} yrs vs ${you.e} yrs`, eAria: `Experience required ${e} years, yours ${you.e} years`,
+        match: ok ? (ref.startsWith('CPCL') ? 'Bid submitted' : 'You qualify') : 'Not eligible',
+        cls: ok ? (ref.startsWith('CPCL') ? 'pill-ink' : 'pill-pass') : 'pill-fail'
+      };
+    });
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tender workspace · CPCL HPGC-0412</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}
+.cell{display:flex;align-items:center;gap:6px;height:34px;padding:0 10px;border-radius:4px;border:1px solid;font-size:12px;box-sizing:border-box}
+.c-P{background:#ECFDF5;border-color:#A7F3D0;color:#065F46}
+.c-R{background:#FFFBEB;border-color:#FDE68A;color:#92400E}
+.c-F{background:#FEF2F2;border-color:#FECACA;color:#991B1B}
+.c-M{background:repeating-linear-gradient(45deg,#FFFFFF 0 4px,#F1F5F9 4px 5px);border-color:#94A3B8;border-style:dashed;color:#475569}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1160px; display: flex; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A;">
+  <dc-import name="OfficerNav" active="tenders" height="{{navH}}" hint-size="240px,1160px"></dc-import>
+  <main style="flex-grow: 1; min-width: 0; box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px;">
+    <header style="display: flex; flex-direction: column; gap: 10px;">
+      <a href="OfficerTenders.dc.html" style="font-size: 12px; color: #475569;">← Tenders</a>
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 6px; max-width: 760px;">
+          <span class="mono" style="font-size: 12px; color: #475569;">CPCL/ENG/2026/HPGC-0412 · Goods · ₹14.50 Cr</span>
+          <h1 class="h1" style="font-size: 28px;">High-Pressure Gas Compressor System, Manali Refinery</h1>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <a href="OfficerReports.dc.html" class="btn btn-secondary">Evaluation report</a>
+          <span class="pill pill-ink" style="height: 40px; padding: 0 14px;">Closes 28 Sep · 15:00 IST</span>
+        </div>
+      </div>
+      <nav aria-label="Tender sections" style="display: flex; gap: 24px; border-bottom: 1px solid #E2E8F0;">
+        <a href="#" class="tab tab-on">Bids (4)</a>
+        <a href="OfficerNewTender.dc.html" class="tab">Clauses (10)</a>
+        <a href="#" class="tab">Tender documents</a>
+        <a href="#" class="tab">Corrigenda (1)</a>
+      </nav>
+    </header>
+
+    <section aria-label="Bids" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+      <sc-for list="{{bids}}" as="b" hint-placeholder-count="4">
+        <a href="OfficerBidReview.dc.html" class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 10px; color: #0F172A; text-decoration: none;">
+          <span style="display: flex; justify-content: space-between; align-items: center;"><span class="mono" style="font-size: 11px; color: #64748B;">{{b.id}}</span><span class="pill {{b.riskCls}}">{{b.risk}}</span></span>
+          <span style="font-size: 14px; font-weight: 600;">{{b.name}}</span>
+          <span style="display: flex; align-items: baseline; gap: 4px;"><span style="font-size: 30px; font-weight: 600;">{{b.score}}</span><span style="font-size: 12px; color: #64748B;">/ 100 · {{b.passed}} mandatory</span></span>
+          <span style="display: flex; gap: 2px; height: 8px;">
+            <sc-for list="{{b.segs}}" as="s" hint-placeholder-count="3">
+              <span title="{{s.tip}}" style="display: block; height: 8px; flex: {{s.w}} 1 0; background: {{s.bg}}; border-radius: {{s.r}};"></span>
+            </sc-for>
+          </span>
+          <span style="display: flex; justify-content: space-between; font-size: 12px; border-top: 1px solid #EEF2F6; padding-top: 10px;"><span style="color: #475569;">AI: {{b.ai}}</span><span style="font-weight: 600;">{{b.decision}}</span></span>
+        </a>
+      </sc-for>
+    </section>
+
+    <section aria-label="Clause comparison" class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <h2 class="h2">Clause-by-clause comparison</h2>
+          <span style="font-size: 12px; color: #64748B;">What the engine found in each bid, against each tender clause</span>
+        </div>
+        <div style="display: flex; gap: 14px; font-size: 11px; color: #475569;">
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-pass"></span>Pass</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-review"></span>Review</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-fail"></span>Fail</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-missing"></span>Missing</span>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 250px repeat(4, minmax(0, 1fr)); gap: 6px; align-items: center;">
+        <span class="th">Clause</span>
+        <span class="th">Apex Heavy</span><span class="th">ABC Industrial</span><span class="th">XYZ Engineering</span><span class="th">PQR Industries</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="10">
+          <div style="display: grid; grid-template-columns: 250px repeat(4, minmax(0, 1fr)); gap: 6px; align-items: center;">
+            <span style="font-size: 12px;"><span class="mono" style="color: #64748B;">{{r.code}}</span> {{r.label}}</span>
+            <sc-for list="{{r.cells}}" as="c" hint-placeholder-count="4">
+              <span class="cell c-{{c.s}}" title="{{c.tip}}"><span class="mono" style="font-size: 10px; font-weight: 700;">{{c.tag}}</span><span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{c.v}}</span></span>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1160}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const tag = { P: 'PASS', R: 'REVIEW', F: 'FAIL', M: 'MISSING' };
+    const fill = { P: '#047857', R: '#F59E0B', F: '#B91C1C' };
+    const bidders = ['Apex Heavy', 'ABC Industrial', 'XYZ Engineering', 'PQR Industries'];
+    const raw = [
+      ['4.1', 'Turnover ≥ ₹10 Cr', [['P', '₹12.40 Cr'], ['P', '₹12.40 Cr'], ['P', '₹10.20 Cr'], ['F', '₹8.72 Cr']]],
+      ['4.2', 'Experience ≥ 5 years', [['P', '8.0 yrs'], ['P', '8.0 yrs'], ['P', '5.2 yrs'], ['F', '3.8 yrs']]],
+      ['2.1', 'GST registration', [['P', 'Active'], ['P', 'Active'], ['P', 'Active'], ['P', 'Active']]],
+      ['2.2', 'PAN', [['P', 'Valid'], ['P', 'Valid'], ['P', 'Valid'], ['P', 'Valid']]],
+      ['7.1', 'EMD / MSME exemption', [['P', 'Udyam'], ['P', 'Udyam'], ['P', 'Udyam'], ['P', 'Udyam']]],
+      ['5.1', 'Direct OEM authorization', [['P', 'Direct OEM'], ['P', 'Direct OEM'], ['P', 'Undertaking pending'], ['F', 'Wrong maker']]],
+      ['6.3', 'Local content ≥ 50%', [['P', '68%'], ['P', '68%'], ['P', '52%'], ['P', '62%']]],
+      ['3.4', 'Non-blacklisting affidavit', [['P', 'Notarised'], ['P', 'Notarised'], ['M', 'Not attached'], ['M', 'Not attached']]],
+      ['8.2', 'ISO 9001:2015 validity', [['P', 'To 30 Nov'], ['P', 'To 30 Nov'], ['P', 'To 15 Oct'], ['R', 'Date unreadable']]],
+      ['5.4', 'API 618 datasheet', [['P', 'Conforms'], ['P', 'Conforms'], ['P', 'Conforms'], ['P', 'Acknowledged']]]
+    ];
+    const rows = raw.map(([code, label, cells]) => ({
+      code, label,
+      cells: cells.map(([s, v], i) => ({ s, v, tag: tag[s], tip: `${bidders[i]} · ${code}: ${tag[s]} (${v})` }))
+    }));
+    const risk = { Low: 'pill-pass', High: 'pill-fail', Critical: 'pill-critical' };
+    const bids = [
+      { id: 'CL-2026-91C25F34', name: 'Apex Heavy Engineering', score: 100, passed: '9/9', risk: 'Low', ai: 'Compliant', decision: 'Approved · signed', c: [10, 0, 0, 0] },
+      { id: 'CL-2026-89A012B4', name: 'ABC Industrial Solutions', score: 100, passed: '9/9', risk: 'Low', ai: 'Compliant', decision: 'Awaiting you', c: [10, 0, 0, 0] },
+      { id: 'CL-2026-77F814D2', name: 'XYZ Engineering Works', score: 91, passed: '8/9', risk: 'High', ai: 'Needs review', decision: 'Awaiting you', c: [9, 0, 0, 1] },
+      { id: 'CL-2026-44B129E8', name: 'PQR Industries', score: 30, passed: '5/9', risk: 'Critical', ai: 'Non-compliant', decision: 'Awaiting you', c: [5, 1, 3, 1] }
+    ].map((b) => {
+      const keys = ['P', 'R', 'F', 'M'];
+      const present = keys.filter((k, i) => b.c[i] > 0);
+      const segs = present.map((k, j) => ({
+        w: b.c[keys.indexOf(k)] * 10,
+        bg: k === 'M' ? 'repeating-linear-gradient(45deg,#FFFFFF 0 2px,#94A3B8 2px 3px)' : fill[k],
+        r: j === present.length - 1 ? '0 4px 4px 0' : '0',
+        tip: `${b.c[keys.indexOf(k)]} of 10 clauses ${tag[k].toLowerCase()}`
+      }));
+      return { ...b, riskCls: risk[b.risk], segs };
+    });
+    return { navH: 1160, rows, bids };
+  }
+}
+</script>
+</body>
+</html>

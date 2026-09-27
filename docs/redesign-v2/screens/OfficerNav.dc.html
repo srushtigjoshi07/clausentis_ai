@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Officer navigation</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<nav aria-label="Officer portal" style="width: 240px; height: {{height}}px; box-sizing: border-box; padding: 20px 14px; background: #0F172A; display: flex; flex-direction: column; gap: 24px; font-family: 'Source Sans 3', system-ui, sans-serif; color: #FFFFFF;">
+  <a href="OfficerOverview.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 4px 6px; text-decoration: none;">
+    <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: #2563EB;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4v5c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V7l8-4z"></path><path d="M8.5 12l2.5 2.5 4.5-5"></path></svg>
+    </span>
+    <span style="display: flex; flex-direction: column;">
+      <span style="font-family: Lexend, sans-serif; font-size: 15px; font-weight: 700; letter-spacing: .06em; color: #FFFFFF;">CLAUSENTIS</span>
+      <span class="eyebrow" style="font-size: 9px; letter-spacing: .14em; color: #93C5FD;">Tender Authority</span>
+    </span>
+  </a>
+  <div style="display: flex; flex-direction: column; gap: 2px;">
+    <span class="eyebrow" style="padding: 0 12px 6px; font-size: 10px; color: #94A3B8;">Evaluate</span>
+    <sc-for list="{{main}}" as="it" hint-placeholder-count="5">
+      <a href="{{it.href}}" class="nav-item {{it.cls}}"><span style="flex-grow: 1;">{{it.label}}</span><sc-if value="{{it.count}}" hint-placeholder-val="{{false}}"><span style="display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box; border-radius: 10px; background: #F59E0B; color: #0F172A; font-size: 11px; font-weight: 700;">{{it.count}}</span></sc-if></a>
+    </sc-for>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 2px;">
+    <span class="eyebrow" style="padding: 0 12px 6px; font-size: 10px; color: #94A3B8;">Records</span>
+    <sc-for list="{{records}}" as="it" hint-placeholder-count="3">
+      <a href="{{it.href}}" class="nav-item {{it.cls}}">{{it.label}}</a>
+    </sc-for>
+  </div>
+  <div style="margin-top: auto; display: flex; flex-direction: column; gap: 2px;">
+    <sc-for list="{{footer}}" as="it" hint-placeholder-count="2">
+      <a href="{{it.href}}" class="nav-item {{it.cls}}">{{it.label}}</a>
+    </sc-for>
+    <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 12px 10px 0; border-top: 1px solid #1E293B;">
+      <span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 16px; background: #1D4ED8; color: #FFFFFF; font-size: 11px; font-weight: 700;">PO</span>
+      <span style="display: flex; flex-direction: column; min-width: 0;">
+        <span style="font-size: 13px; font-weight: 600; color: #FFFFFF;">[Officer name]</span>
+        <span style="font-size: 12px; color: #94A3B8;">CPCL · Procurement</span>
+      </span>
+    </div>
+  </div>
+</nav>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"active":{"editor":"enum","options":["overview","tenders","reviews","verification","assistant","audit","reports","integrations","settings"],"default":"overview"},"height":{"editor":"int","default":900},"$preview":{"width":240,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const active = this.props.active ?? 'overview';
+    const mk = (id, label, href, count) => ({ id, label, href, count: count || '', cls: id === active ? 'nav-on' : '' });
+    return {
+      height: this.props.height ?? 900,
+      main: [
+        mk('overview', 'Overview', 'OfficerOverview.dc.html'),
+        mk('tenders', 'Tenders', 'OfficerTenders.dc.html', '4'),
+        mk('reviews', 'Bid reviews', 'OfficerBidReview.dc.html', '3'),
+        mk('verification', 'Portal verification', 'OfficerPortalVerification.dc.html'),
+        mk('assistant', 'Assistant', 'OfficerAssistant.dc.html')
+      ],
+      records: [
+        mk('audit', 'Audit trail', 'OfficerAuditTrail.dc.html'),
+        mk('reports', 'Reports', 'OfficerReports.dc.html')
+      ],
+      footer: [
+        mk('integrations', 'Data sources', 'OfficerIntegrations.dc.html'),
+        mk('settings', 'Settings', 'OfficerSettings.dc.html')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

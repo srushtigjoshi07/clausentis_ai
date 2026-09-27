@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Clausentis</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 1560px; background: #FFFFFF; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A; display: flex; flex-direction: column;">
+  <header style="height: 72px; box-sizing: border-box; padding: 0 64px; display: flex; align-items: center; gap: 40px; border-bottom: 1px solid #E2E8F0;">
+    <span style="display: flex; align-items: center; gap: 10px;">
+      <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: #2563EB;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4v5c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V7l8-4z"></path><path d="M8.5 12l2.5 2.5 4.5-5"></path></svg></span>
+      <span style="font-family: Lexend, sans-serif; font-size: 15px; font-weight: 700; letter-spacing: .06em;">CLAUSENTIS</span>
+    </span>
+    <nav aria-label="Site" style="display: flex; gap: 28px; font-size: 13px;"><a href="#how" style="color: #475569;">How it works</a><a href="#checks" style="color: #475569;">What it checks</a><a href="#roles" style="color: #475569;">For officers &amp; bidders</a></nav>
+    <span style="margin-left: auto; display: flex; gap: 8px;"><a href="SignIn.dc.html" class="btn btn-secondary">Sign in</a><a href="SignUp.dc.html" class="btn btn-primary">Register as bidder</a></span>
+  </header>
+
+  <section aria-label="Introduction" style="box-sizing: border-box; padding: 88px 64px 64px; background: #EFF6FF; border-bottom: 1px solid #DBEAFE; display: grid; grid-template-columns: minmax(0, 1fr) 560px; gap: 64px; align-items: center;">
+    <div style="display: flex; flex-direction: column; gap: 22px;">
+      <span class="eyebrow">Bid compliance verification for GeM procurement</span>
+      <h1 style="margin: 0; font-size: 56px; line-height: 1.05; font-weight: 600; font-family: Lexend, sans-serif; letter-spacing: -0.03em;">Every bid checked against every clause, before anyone decides.</h1>
+      <p class="sub" style="font-size: 17px; max-width: 560px;">Clausentis reads bidder documents, cross-checks them with Udyam, GST, PAN and other registries, and shows the procurement officer the evidence, the gaps and a recommendation. The officer makes and signs the decision.</p>
+      <span style="display: flex; gap: 10px;"><a href="SignIn.dc.html" class="btn btn-primary" style="height: 46px; padding: 0 20px;">Sign in</a><a href="#how" class="btn btn-secondary" style="height: 46px; padding: 0 20px;">See how it works</a></span>
+    </div>
+    <div class="card" style="padding: 22px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 12px 32px rgba(15,23,42,0.08);">
+      <span style="display: flex; justify-content: space-between; align-items: center;"><span class="eyebrow">Sample · 4 bids on one tender</span><span class="mono" style="font-size: 10px; color: #64748B;">DEMO DATA</span></span>
+      <sc-for list="{{bids}}" as="b" hint-placeholder-count="4">
+        <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 36px 84px; gap: 10px; align-items: center; font-size: 12px;">
+          <span style="font-weight: 600;">{{b.n}}</span>
+          <span style="display: flex; gap: 2px; height: 10px;">
+            <sc-for list="{{b.segs}}" as="s" hint-placeholder-count="3"><span title="{{s.tip}}" style="display: block; height: 10px; flex: {{s.f}} 1 0; background: {{s.bg}}; border-radius: {{s.r}};"></span></sc-for>
+          </span>
+          <span class="mono" style="font-weight: 600; text-align: right;">{{b.score}}</span>
+          <span><span class="pill {{b.cls}}">{{b.risk}}</span></span>
+        </div>
+      </sc-for>
+      <span style="display: flex; gap: 14px; font-size: 11px; color: #475569; border-top: 1px solid #EEF2F6; padding-top: 12px;">
+        <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-pass"></span>Clause met</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-review"></span>Review</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-fail"></span>Failed</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-missing"></span>Missing</span>
+      </span>
+    </div>
+  </section>
+
+  <section id="how" aria-label="How it works" style="box-sizing: border-box; padding: 56px 64px; background: #F8FAFC; border-top: 1px solid #E2E8F0; border-bottom: 1px solid #E2E8F0; display: flex; flex-direction: column; gap: 28px;">
+    <h2 style="margin: 0; font-size: 32px; font-weight: 600; font-family: Lexend, sans-serif; letter-spacing: -0.02em;">How it works</h2>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;">
+      <sc-for list="{{steps}}" as="s" hint-placeholder-count="4">
+        <div class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 10px;"><span class="tile tile-blue" style="font-family: Lexend, sans-serif; font-size: 14px; font-weight: 700;">{{s.n}}</span><span style="font-family: Lexend, sans-serif; font-size: 17px; font-weight: 600;">{{s.t}}</span><span style="font-size: 13px; color: #475569; line-height: 1.55;">{{s.d}}</span></div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="checks" aria-label="What it checks" style="box-sizing: border-box; padding: 56px 64px; display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 48px;">
+    <div style="display: flex; flex-direction: column; gap: 12px;"><h2 style="margin: 0; font-size: 32px; font-weight: 600; font-family: Lexend, sans-serif; letter-spacing: -0.02em;">What it checks</h2><p class="sub">Statutory registrations, tender-specific thresholds and the consistency of a bidder's own documents.</p></div>
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;">
+      <sc-for list="{{checks}}" as="c" hint-placeholder-count="12">
+        <span style="display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border: 1px solid #DBEAFE; border-radius: 10px; background: #FFFFFF; font-size: 14px; font-weight: 600;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>{{c}}</span>
+      </sc-for>
+    </div>
+  </section>
+
+  <section id="roles" aria-label="Roles" style="box-sizing: border-box; padding: 0 64px 64px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+    <div class="card" style="padding: 28px; display: flex; flex-direction: column; gap: 10px;"><span class="eyebrow">For procurement officers</span><span style="font-family: Lexend, sans-serif; font-size: 20px; font-weight: 600;">Review evidence, not paperwork</span><span style="font-size: 14px; color: #475569; line-height: 1.6;">See each bid's clause results with page citations, portal checks, and contradictions between documents. Record and sign your decision; every step lands in the audit trail.</span></div>
+    <div class="card" style="padding: 28px; display: flex; flex-direction: column; gap: 10px;"><span class="eyebrow">For bidders</span><span style="font-family: Lexend, sans-serif; font-size: 20px; font-weight: 600;">Know what will fail before you submit</span><span style="font-size: 14px; color: #475569; line-height: 1.6;">Check your documents against the tender the same way the officer will, fix gaps, then submit a sealed package.</span></div>
+  </section>
+
+  <footer style="margin-top: auto; box-sizing: border-box; padding: 24px 64px; border-top: 1px solid #E2E8F0; display: flex; justify-content: space-between; font-size: 12px; color: #64748B;"><span>Clausentis · SIH26100 prototype · registry data shown is synthetic</span><span style="display: flex; gap: 20px;"><a href="#" style="color: #475569;">Privacy</a><a href="#" style="color: #475569;">Terms</a></span></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const fill = { P: '#047857', R: '#F59E0B', F: '#B91C1C', M: 'repeating-linear-gradient(45deg,#FFFFFF 0 2px,#94A3B8 2px 3px)' };
+    const risk = { Low: 'pill-pass', High: 'pill-fail', Critical: 'pill-critical' };
+    const bids = [
+      ['Apex Heavy', 100, 'Low', { P: 10 }], ['ABC Industrial', 100, 'Low', { P: 10 }],
+      ['XYZ Engineering', 91, 'High', { P: 9, M: 1 }], ['PQR Industries', 30, 'Critical', { P: 5, R: 1, F: 3, M: 1 }]
+    ].map(([n, score, r, c]) => {
+      const keys = ['P', 'R', 'F', 'M'].filter((k) => c[k]);
+      return { n, score, risk: r, cls: risk[r], segs: keys.map((k, i) => ({ f: c[k], bg: fill[k], r: i === keys.length - 1 ? '0 4px 4px 0' : '0', tip: `${c[k]} clauses` })) };
+    });
+    const steps = [
+      { n: '01', t: 'Officer publishes', d: 'AI extracts eligibility clauses from the tender document; the officer confirms each rule.' },
+      { n: '02', t: 'Bidder checks', d: 'The bidder uploads documents and sees exactly which clauses pass, fail or are missing.' },
+      { n: '03', t: 'Engine verifies', d: 'Values are read from documents, cross-checked across files and against government registries.' },
+      { n: '04', t: 'Officer decides', d: 'The officer reviews evidence and AI advice, then signs a sealed decision.' }
+    ];
+    const checks = ['Udyam / MSME', 'GST & returns', 'PAN', 'Income tax', 'MCA21', 'EPFO / ESIC', 'Make in India', 'Startup India', 'NSIC', 'OEM authorization', 'DigiLocker', 'Debarment'];
+    return { bids, steps, checks };
+  }
+}
+</script>
+</body>
+</html>

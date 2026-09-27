@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bidder home</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 1060px; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A; display: flex; flex-direction: column;">
+  <dc-import name="BidderNav" active="home" hint-size="1440px,64px"></dc-import>
+  <main style="box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px;">
+    <header style="box-sizing: border-box; padding: 24px 28px; border-radius: 14px; background: #1E3A8A; color: #FFFFFF; display: flex; align-items: center; justify-content: space-between; gap: 24px;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <span class="eyebrow" style="color: #BFDBFE;">Home · 26 Sep 2026</span>
+        <h1 class="h1" style="color: #FFFFFF;">Your CPCL bid was qualified</h1>
+        <span style="font-size: 14px; color: #DBEAFE;">You also qualify for the IOCL maintenance tender, closing 5 Oct.</span>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <a href="BidderSubmitted.dc.html" class="btn btn-ghostblue">View decision</a>
+        <a href="BidderFindTenders.dc.html" class="btn btn-onblue">Find tenders</a>
+      </div>
+    </header>
+
+    <section aria-label="Key figures" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+      <div class="card" style="padding: 16px 18px; display: flex; gap: 14px; align-items: flex-start;">
+        <span class="tile tile-blue"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12l16-8-6 16-2-6z"></path><path d="M12 14l8-10"></path></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0;"><span style="font-size: 13px; color: #475569;">Bids submitted</span><span style="display: flex; align-items: center; gap: 10px;"><span style="font-family: Lexend, sans-serif; font-size: 26px; font-weight: 600; line-height: 1.1;">1</span></span><span style="font-size: 12px; color: #64748B;">CPCL/ENG/2026/HPGC-0412</span></span>
+      </div>
+      <div class="card" style="padding: 16px 18px; display: flex; gap: 14px; align-items: flex-start;">
+        <span class="tile tile-green"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M8.5 12l2.5 2.5 4.5-5"></path></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0;"><span style="font-size: 13px; color: #475569;">Decisions received</span><span style="display: flex; align-items: center; gap: 10px;"><span style="font-family: Lexend, sans-serif; font-size: 26px; font-weight: 600; line-height: 1.1;">1</span><span class="pill pill-pass">Qualified</span></span><span style="font-size: 12px; color: #64748B;">Signed 10 Sep 2026</span></span>
+      </div>
+      <div class="card" style="padding: 16px 18px; display: flex; gap: 14px; align-items: flex-start;">
+        <span class="tile tile-violet"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6"></circle><path d="M20 20l-4.5-4.5"></path></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0;"><span style="font-size: 13px; color: #475569;">Open tenders you qualify for</span><span style="display: flex; align-items: center; gap: 10px;"><span style="font-family: Lexend, sans-serif; font-size: 26px; font-weight: 600; line-height: 1.1;">2 <span style="font-size: 14px; color: #64748B; font-weight: 400;">of 4</span></span></span><span style="font-size: 12px; color: #64748B;">Based on your profile</span></span>
+      </div>
+      <div class="card" style="padding: 16px 18px; display: flex; gap: 14px; align-items: flex-start;">
+        <span class="tile tile-amber"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"></rect><path d="M8 3v4M16 3v4M4 10h16"></path></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0;"><span style="font-size: 13px; color: #475569;">Documents expiring in 90 days</span><span style="display: flex; align-items: center; gap: 10px;"><span style="font-family: Lexend, sans-serif; font-size: 26px; font-weight: 600; line-height: 1.1;">1</span></span><span style="font-size: 12px; color: #64748B;">ISO 9001 · 30 Nov 2026</span></span>
+      </div>
+    </section>
+
+    <div style="display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px;">
+      <section aria-label="Turnover eligibility" class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div style="display: flex; flex-direction: column; gap: 4px;"><h2 class="h2">Minimum turnover by open tender</h2><span style="font-size: 12px; color: #64748B;">The line is your declared turnover, ₹12.40 Cr</span></div>
+          <span style="display: flex; gap: 14px; font-size: 11px; color: #475569;"><span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-ink"></span>Within reach</span><span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-track"></span>Above yours</span></span>
+        </div>
+        <svg width="620" height="200" viewBox="0 0 620 200" role="img" aria-label="Minimum turnover: IOCL 6 crore, CPCL 10, BHEL 15, NTPC 25; your turnover 12.4 crore">
+          <sc-for list="{{tenders}}" as="t" hint-placeholder-count="4">
+            <g class="mark">
+              <title>{{t.tip}}</title>
+              <text x="0" y="{{t.ty}}" class="clabel" style="font-weight: 600;">{{t.org}}</text>
+              <text x="0" y="{{t.ty2}}" class="axis">{{t.cat}}</text>
+              <rect x="110" y="{{t.y}}" width="{{t.w}}" height="18" fill="{{t.fill}}"></rect>
+              <text x="{{t.vx}}" y="{{t.ty}}" class="cvalue">{{t.val}}</text>
+            </g>
+          </sc-for>
+          <line x1="{{youX}}" y1="4" x2="{{youX}}" y2="176" stroke="#0F172A" stroke-width="2" stroke-dasharray="0"></line>
+          <text x="{{youX}}" y="194" class="axis" text-anchor="middle" style="fill: #2563EB; font-weight: 700;">YOU ₹12.40 CR</text>
+        </svg>
+      </section>
+
+      <section aria-label="Bid progress" class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div style="display: flex; flex-direction: column; gap: 4px;"><h2 class="h2">CPCL gas compressor bid</h2><span class="mono" style="font-size: 11px; color: #64748B;">CL-2026-91C25F34</span></div>
+          <span class="pill pill-pass">Qualified</span>
+        </div>
+        <ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column;">
+          <sc-for list="{{steps}}" as="s" hint-placeholder-count="4">
+            <li style="display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 12px; padding-bottom: 14px;">
+              <span style="display: flex; flex-direction: column; align-items: center; gap: 4px;"><span class="dot" style="width: 10px; height: 10px; border-radius: 5px; background: #2563EB; margin-top: 4px;"></span><span style="display: block; width: 1px; flex-grow: 1; background: {{s.line}};"></span></span>
+              <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 13px; font-weight: 600;">{{s.t}}</span><span style="font-size: 12px; color: #475569;">{{s.d}}</span></span>
+            </li>
+          </sc-for>
+        </ol>
+        <a href="BidderSubmitted.dc.html" style="font-size: 12px; font-weight: 600; margin-top: auto;">View receipt and decision →</a>
+      </section>
+    </div>
+
+    <section aria-label="Closing soon" class="card" style="overflow: hidden;">
+      <div style="padding: 16px 20px 8px; display: flex; justify-content: space-between;"><h2 class="h2">Closing soon</h2><a href="BidderFindTenders.dc.html" style="font-size: 12px; font-weight: 600;">All tenders →</a></div>
+      <sc-for list="{{closing}}" as="c" hint-placeholder-count="3">
+        <a href="BidderTenderDetail.dc.html" class="tr" style="display: grid; grid-template-columns: minmax(0, 2.4fr) 130px 160px 110px; gap: 12px; align-items: center; padding: 12px 20px; color: #0F172A; text-decoration: none; font-size: 13px;">
+          <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600;">{{c.t}}</span><span class="mono" style="font-size: 11px; color: #64748B;">{{c.ref}}</span></span>
+          <span>{{c.close}}</span>
+          <span><span class="pill {{c.cls}}">{{c.match}}</span></span>
+          <span class="btn btn-secondary" style="height: 32px; font-size: 12px;">Open</span>
+        </a>
+      </sc-for>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1060}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const px = 16, you = 12.4;
+    const tenders = [
+      ['IOCL', 'SERVICES', 6], ['CPCL', 'GOODS', 10], ['BHEL', 'GOODS', 15], ['NTPC', 'WORKS', 25]
+    ].map(([org, cat, cr], i) => {
+      const y = 12 + i * 44;
+      const ok = cr <= you;
+      return { org, cat, y, ty: y + 9, ty2: y + 22, w: cr * px, vx: 110 + cr * px + 8, fill: ok ? '#2563EB' : '#E2E8F0', val: `₹${cr} Cr`, tip: `${org} requires ₹${cr} Cr; you declared ₹${you} Cr` };
+    });
+    const steps = [
+      { t: 'Checked twice before submitting', d: 'Readiness 49 → 100 after replacing the financial statement', line: '#E2E8F0' },
+      { t: 'Submitted and sealed', d: '09 Sep 2026, 18:45 IST · SHA-256 recorded', line: '#E2E8F0' },
+      { t: 'Verified by Clausentis', d: '10 of 10 clauses met · low risk', line: '#E2E8F0' },
+      { t: 'Qualified by the procurement officer', d: 'Signed 10 Sep 2026', line: 'transparent' }
+    ];
+    const closing = [
+      { t: 'Annual maintenance of DCS & field instrumentation', ref: 'IOCL/RHQ/INST/2026/AMC-882', close: '5 Oct 2026', match: 'You qualify', cls: 'pill-pass' },
+      { t: 'Boiler quality steel plates (SA 516 Gr 70)', ref: 'BHEL/PSWR/PUR/ST-2026-904', close: '14 Oct 2026', match: 'Turnover short', cls: 'pill-fail' },
+      { t: 'Civil & structural works for FGD system', ref: 'NTPC/CC/CS-2026/FGD-119', close: '22 Oct 2026', match: 'Turnover short', cls: 'pill-fail' }
+    ];
+    return { tenders, youX: 110 + you * px, steps, closing };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Officer overview</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 1140px; display: flex; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A;">
+  <dc-import name="OfficerNav" active="overview" height="{{navH}}" hint-size="240px,1140px"></dc-import>
+  <main style="flex-grow: 1; min-width: 0; box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 24px;">
+    <header style="box-sizing: border-box; padding: 24px 28px; border-radius: 14px; background: #1E3A8A; color: #FFFFFF; display: flex; align-items: center; justify-content: space-between; gap: 24px;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <span class="eyebrow" style="color: #BFDBFE;">Overview · 26 Sep 2026</span>
+        <h1 class="h1" style="color: #FFFFFF;">3 bids are waiting for your decision</h1>
+        <span style="font-size: 14px; color: #DBEAFE;">CPCL/ENG/2026/HPGC-0412 closes in 2 days. One bid is flagged critical.</span>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <a href="OfficerNewTender.dc.html" class="btn btn-ghostblue">Publish tender</a>
+        <a href="OfficerBidReview.dc.html" class="btn btn-onblue">Start reviewing</a>
+      </div>
+    </header>
+
+    <section aria-label="Key figures" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+      <div class="card" style="padding: 16px 18px; display: flex; gap: 14px; align-items: flex-start;">
+        <span class="tile tile-blue"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"></path><path d="M14 3v5h5"></path><path d="M10 13h6M10 17h6"></path></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0;"><span style="font-size: 13px; color: #475569;">Open tenders</span><span style="display: flex; align-items: center; gap: 10px;"><span style="font-family: Lexend, sans-serif; font-size: 26px; font-weight: 600; line-height: 1.1;">4</span></span><span style="font-size: 12px; color: #64748B;">Next closes in 2 days</span></span>
+      </div>
+      <div class="card" style="padding: 16px 18px; display: flex; gap: 14px; align-items: flex-start;">
+        <span class="tile tile-violet"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 13l2-8h12l2 8"></path><path d="M4 13v6h16v-6h-5l-1 2h-4l-1-2z"></path></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0;"><span style="font-size: 13px; color: #475569;">Bids received</span><span style="display: flex; align-items: center; gap: 10px;"><span style="font-family: Lexend, sans-serif; font-size: 26px; font-weight: 600; line-height: 1.1;">4</span></span><span style="font-size: 12px; color: #64748B;">All on CPCL/ENG/2026/HPGC-0412</span></span>
+      </div>
+      <div class="card" style="padding: 16px 18px; display: flex; gap: 14px; align-items: flex-start;">
+        <span class="tile tile-amber"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4l3 2"></path></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0;"><span style="font-size: 13px; color: #475569;">Awaiting your decision</span><span style="display: flex; align-items: center; gap: 10px;"><span style="font-family: Lexend, sans-serif; font-size: 26px; font-weight: 600; line-height: 1.1;">3</span></span><span style="font-size: 12px; color: #64748B;">1 decision signed</span></span>
+      </div>
+      <div class="card" style="padding: 16px 18px; display: flex; gap: 14px; align-items: flex-start;">
+        <span class="tile tile-red"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l9 16H3z"></path><path d="M12 10v4M12 17v.5"></path></svg></span>
+        <span style="display: flex; flex-direction: column; gap: 4px; min-width: 0;"><span style="font-size: 13px; color: #475569;">Critical-risk bids</span><span style="display: flex; align-items: center; gap: 10px;"><span style="font-family: Lexend, sans-serif; font-size: 26px; font-weight: 600; line-height: 1.1;">1</span><span class="pill pill-critical">Debarred</span></span><span style="font-size: 12px; color: #64748B;">PQR Industries Ltd</span></span>
+      </div>
+    </section>
+
+    <div style="display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 16px;">
+      <section aria-label="Requirement outcomes" class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <h2 class="h2">Where bids fall short</h2>
+            <span style="font-size: 12px; color: #64748B;">Outcome of each tender clause across the 4 bids, CPCL/ENG/2026/HPGC-0412</span>
+          </div>
+          <div style="display: flex; gap: 12px; font-size: 11px; color: #475569; flex-wrap: wrap; justify-content: flex-end;">
+            <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-pass"></span>Pass</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-review"></span>Review</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-fail"></span>Fail</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px;"><span class="swatch sw-missing"></span>Missing</span>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <sc-for list="{{clauses}}" as="c" hint-placeholder-count="10">
+            <div style="display: grid; grid-template-columns: 196px 256px minmax(0, 1fr); align-items: center; gap: 12px; height: 22px;">
+              <span style="font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><span class="mono" style="color: #64748B;">{{c.code}}</span> {{c.label}}</span>
+              <span style="display: flex; gap: 2px; height: 14px;">
+                <sc-for list="{{c.segs}}" as="s" hint-placeholder-count="2">
+                  <span class="mark" title="{{s.tip}}" style="display: block; width: {{s.w}}px; height: 14px; background: {{s.bg}}; border-radius: {{s.radius}}; box-sizing: border-box; border: {{s.border}};"></span>
+                </sc-for>
+              </span>
+              <span class="mono" style="font-size: 11px; color: #475569;">{{c.summary}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section aria-label="Scores by bid" class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <h2 class="h2">Compliance score by bid</h2>
+          <span style="font-size: 12px; color: #64748B;">Deterministic engine score out of 100, with risk</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 14px; padding-top: 4px;">
+          <sc-for list="{{scores}}" as="b" hint-placeholder-count="4">
+            <a href="OfficerBidReview.dc.html" style="display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: #0F172A;">
+              <span style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <span style="font-size: 13px; font-weight: 600;">{{b.name}}</span>
+                <span class="pill {{b.riskCls}}">{{b.risk}}</span>
+              </span>
+              <span style="display: flex; align-items: center; gap: 10px;">
+                <span style="position: relative; display: block; width: 300px; height: 12px; background: #EEF2F7; border-radius: 0 4px 4px 0;">
+                  <span class="mark" title="{{b.name}}: {{b.score}} / 100" style="position: absolute; left: 0; top: 0; display: block; width: {{b.w}}px; height: 12px; background: #2563EB; border-radius: 0 4px 4px 0;"></span>
+                </span>
+                <span class="mono" style="font-size: 12px; font-weight: 600;">{{b.score}}</span>
+              </span>
+            </a>
+          </sc-for>
+        </div>
+        <div style="margin-top: auto; display: flex; justify-content: space-between; font-size: 11px; color: #64748B; border-top: 1px solid #EEF2F6; padding-top: 10px;">
+          <span>Average 80</span><span>Median 95.5</span>
+        </div>
+      </section>
+    </div>
+
+    <div style="display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 16px;">
+      <section aria-label="Decision queue" class="card" style="overflow: hidden;">
+        <div style="padding: 18px 20px 12px; display: flex; justify-content: space-between; align-items: center;">
+          <h2 class="h2">Decision queue</h2>
+          <a href="OfficerTenderWorkspace.dc.html" style="font-size: 12px; font-weight: 600;">Open tender workspace →</a>
+        </div>
+        <div style="display: grid; grid-template-columns: minmax(0, 1.6fr) 70px 110px minmax(0, 1.1fr) 110px; gap: 12px; padding: 8px 20px;" class="th">
+          <span>Bid</span><span>Score</span><span>Risk</span><span>AI advice</span><span></span>
+        </div>
+        <sc-for list="{{queue}}" as="q" hint-placeholder-count="3">
+          <div class="tr" style="display: grid; grid-template-columns: minmax(0, 1.6fr) 70px 110px minmax(0, 1.1fr) 110px; gap: 12px; align-items: center; padding: 12px 20px; font-size: 13px;">
+            <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-weight: 600;">{{q.name}}</span><span class="mono" style="font-size: 11px; color: #64748B;">{{q.id}} · {{q.when}}</span></span>
+            <span class="mono" style="font-weight: 600;">{{q.score}}</span>
+            <span><span class="pill {{q.riskCls}}">{{q.risk}}</span></span>
+            <span style="color: #475569;">{{q.ai}}</span>
+            <a href="OfficerBidReview.dc.html" class="btn btn-secondary" style="height: 32px; font-size: 12px;">Review</a>
+          </div>
+        </sc-for>
+      </section>
+
+      <section aria-label="Tender deadlines" class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <h2 class="h2">Closing dates</h2>
+          <span style="font-size: 12px; color: #64748B;">Next 30 days · today is 26 Sep</span>
+        </div>
+        <svg width="400" height="176" viewBox="0 0 400 176" role="img" aria-label="Timeline of tender closing dates from 26 September to 26 October">
+          <line x1="8" y1="140" x2="392" y2="140" stroke="#E2E8F0" stroke-width="1"></line>
+          <line x1="8" y1="20" x2="8" y2="140" stroke="#0F172A" stroke-width="1"></line>
+          <text x="8" y="160" class="axis">26 SEP</text>
+          <text x="136" y="160" class="axis" text-anchor="middle">6 OCT</text>
+          <text x="264" y="160" class="axis" text-anchor="middle">16 OCT</text>
+          <text x="392" y="160" class="axis" text-anchor="end">26 OCT</text>
+          <sc-for list="{{deadlines}}" as="d" hint-placeholder-count="4">
+            <g class="mark">
+              <title>{{d.tip}}</title>
+              <line x1="{{d.x}}" y1="{{d.y}}" x2="{{d.x}}" y2="140" stroke="#CBD5E1" stroke-width="1"></line>
+              <circle cx="{{d.x}}" cy="{{d.y}}" r="5" fill="#2563EB" stroke="#FFFFFF" stroke-width="2"></circle>
+              <text x="{{d.lx}}" y="{{d.ly}}" class="clabel" style="font-size: 11px; font-weight: 600;">{{d.org}}</text>
+              <text x="{{d.lx}}" y="{{d.ly2}}" class="axis">{{d.meta}}</text>
+            </g>
+          </sc-for>
+        </svg>
+      </section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1140}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const colors = { P: '#047857', R: '#F59E0B', F: '#B91C1C' };
+    const names = { P: 'pass', R: 'review', F: 'fail', M: 'missing' };
+    const raw = [
+      ['3.4', 'Non-blacklisting undertaking', { P: 2, M: 2 }],
+      ['4.1', 'Average turnover ≥ ₹10 Cr', { P: 3, F: 1 }],
+      ['4.2', 'Experience ≥ 5 years', { P: 3, F: 1 }],
+      ['5.1', 'Direct OEM authorization', { P: 3, F: 1 }],
+      ['8.2', 'ISO 9001:2015 validity', { P: 3, R: 1 }],
+      ['2.1', 'GST registration', { P: 4 }],
+      ['2.2', 'PAN', { P: 4 }],
+      ['7.1', 'EMD / MSME exemption', { P: 4 }],
+      ['6.3', 'Local content ≥ 50%', { P: 4 }],
+      ['5.4', 'API 618 datasheet', { P: 4 }]
+    ];
+    const unit = 62; // px per bid; 4 bids + gaps fit in 256px
+    const clauses = raw.map(([code, label, counts]) => {
+      const keys = ['P', 'R', 'F', 'M'].filter((k) => counts[k]);
+      const segs = keys.map((k, i) => ({
+        w: counts[k] * unit + (counts[k] - 1) * 2,
+        bg: k === 'M' ? 'repeating-linear-gradient(45deg,#FFFFFF 0 3px,#94A3B8 3px 4px)' : colors[k],
+        border: k === 'M' ? '1px solid #94A3B8' : '0',
+        radius: i === keys.length - 1 ? '0 4px 4px 0' : '0',
+        tip: `${code}: ${counts[k]} of 4 ${names[k]}`
+      }));
+      const issues = 4 - (counts.P || 0);
+      return { code, label, segs, summary: issues ? `${counts.P || 0}/4 pass` : 'all pass' };
+    });
+    const risk = { Low: 'pill-pass', High: 'pill-fail', Critical: 'pill-critical' };
+    const scores = [
+      { name: 'Apex Heavy Engineering', score: 100, risk: 'Low' },
+      { name: 'ABC Industrial Solutions', score: 100, risk: 'Low' },
+      { name: 'XYZ Engineering Works', score: 91, risk: 'High' },
+      { name: 'PQR Industries', score: 30, risk: 'Critical' }
+    ].map((b) => ({ ...b, w: b.score * 3, riskCls: risk[b.risk] }));
+    const queue = [
+      { name: 'PQR Industries Ltd', id: 'CL-2026-44B129E8', when: '07 Sep', score: 30, risk: 'Critical', ai: 'Non-compliant' },
+      { name: 'XYZ Engineering Works', id: 'CL-2026-77F814D2', when: '08 Sep', score: 91, risk: 'High', ai: 'Needs manual review' },
+      { name: 'ABC Industrial Solutions', id: 'CL-2026-89A012B4', when: '09 Sep', score: 100, risk: 'Low', ai: 'Compliant' }
+    ].map((q) => ({ ...q, riskCls: risk[q.risk] }));
+    const x = (day) => 8 + day * (384 / 30); // day offset from 26 Sep
+    const deadlines = [
+      { org: 'CPCL', day: 2, meta: '28 SEP · 4 BIDS', tip: 'CPCL/ENG/2026/HPGC-0412 closes 28 Sep, 4 bids', row: 0 },
+      { org: 'IOCL', day: 9, meta: '5 OCT · 0 BIDS', tip: 'IOCL/RHQ/INST/2026/AMC-882 closes 5 Oct', row: 1 },
+      { org: 'BHEL', day: 18, meta: '14 OCT · 0 BIDS', tip: 'BHEL/PSWR/PUR/ST-2026-904 closes 14 Oct', row: 2 },
+      { org: 'NTPC', day: 26, meta: '22 OCT · 0 BIDS', tip: 'NTPC/CC/CS-2026/FGD-119 closes 22 Oct', row: 3 }
+    ].map((d) => {
+      const cx = x(d.day);
+      const y = 30 + d.row * 28;
+      const flip = cx > 300;
+      return { ...d, x: cx, y, lx: flip ? cx - 90 : cx + 10, ly: y - 2, ly2: y + 11 };
+    });
+    return { navH: 1140, clauses, scores, queue, deadlines };
+  }
+}
+</script>
+</body>
+</html>

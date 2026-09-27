@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Portal verification</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 1120px; display: flex; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A;">
+  <dc-import name="OfficerNav" active="verification" height="{{navH}}" hint-size="240px,1120px"></dc-import>
+  <main style="flex-grow: 1; min-width: 0; box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px;">
+    <header style="display: flex; justify-content: space-between; align-items: flex-end;">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <span class="eyebrow">Portal verification</span>
+        <h1 class="h1">Check an entity across government sources</h1>
+      </div>
+      <a href="OfficerIntegrations.dc.html" class="pill pill-review" style="height: 28px; text-decoration: none;">Sandbox data · no live APIs yet</a>
+    </header>
+
+    <div style="display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 16px; align-items: start;">
+      <section aria-label="Identity" class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+        <h2 class="h2">Identity to check</h2>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="v-name" class="label">Legal name</label><input id="v-name" class="input" value="Apex Heavy Engineering Pvt Ltd"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="v-pan" class="label">PAN</label><input id="v-pan" class="input mono" value="AABCA1234F"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="v-gst" class="label">GSTIN</label><input id="v-gst" class="input mono" value="33AABCA1234F1Z8"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="v-udyam" class="label">Udyam number</label><input id="v-udyam" class="input mono" value="UDYAM-TN-02-0049182"></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><label for="v-cin" class="label">CIN</label><input id="v-cin" class="input mono" value="U28910TN2014PTC099418"></div>
+        <button type="button" class="btn btn-primary" style="height: 44px;">Run checks</button>
+        <span style="font-size: 11px; color: #64748B;">Or pick a submitted bid to prefill from its documents.</span>
+      </section>
+
+      <div style="display: flex; flex-direction: column; gap: 16px; min-width: 0;">
+        <section aria-label="Result" style="display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 16px;">
+          <div class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 10px;">
+            <span class="eyebrow">Verification score</span>
+            <span style="display: flex; align-items: baseline; gap: 6px;"><span style="font-size: 48px; line-height: 1; font-weight: 600;">75</span><span style="font-size: 14px; color: #64748B;">/ 100</span></span>
+            <span><span class="pill pill-review">Medium risk</span></span>
+            <span style="font-size: 12px; color: #475569;">12 fields matched · 1 mismatch · names and PAN consistent across sources</span>
+          </div>
+          <div class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+            <h2 class="h2" style="font-size: 14px;">Where the points come from</h2>
+            <sc-for list="{{breakdown}}" as="b" hint-placeholder-count="4">
+              <div style="display: grid; grid-template-columns: 170px minmax(0, 1fr) 56px; gap: 12px; align-items: center; font-size: 12px;">
+                <span style="color: #334155;">{{b.label}}</span>
+                <span style="display: block; position: relative; height: 12px; background: #EEF2F7; width: {{b.trackW}}px; border-radius: 0 4px 4px 0;">
+                  <span class="mark" title="{{b.label}}: {{b.score}} of {{b.max}}" style="position: absolute; left: 0; top: 0; display: block; height: 12px; width: {{b.w}}px; background: #2563EB; border-radius: {{b.r}};"></span>
+                </span>
+                <span class="mono" style="font-weight: 600; text-align: right;">{{b.score}}/{{b.max}}</span>
+              </div>
+            </sc-for>
+            <span style="font-size: 11px; color: #64748B;">Bar length is each category's maximum, so empty track is points not earned.</span>
+          </div>
+        </section>
+
+        <section aria-label="Sources" class="card" style="overflow: hidden;">
+          <div class="th" style="display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 2.4fr) 120px; gap: 12px; padding: 10px 18px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0;">
+            <span>Source</span><span>Result</span><span>Status</span>
+          </div>
+          <sc-for list="{{sources}}" as="s" hint-placeholder-count="10">
+            <div class="tr" style="display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 2.4fr) 120px; gap: 12px; align-items: center; padding: 11px 18px; font-size: 12px;">
+              <span style="font-weight: 600;">{{s.n}}</span>
+              <span style="color: #475569;">{{s.m}}</span>
+              <span><span class="pill {{s.cls}}">{{s.s}}</span></span>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const px = 4; // px per point, shared scale across categories
+    const breakdown = [
+      ['Identity (PAN, GSTIN, name)', 50, 50],
+      ['Registration (Udyam, CIN)', 10, 25],
+      ['Active status', 15, 15],
+      ['Cross-source consistency', 0, 10]
+    ].map(([label, score, max]) => ({ label, score, max, trackW: max * px, w: score * px, r: score === max ? '0 4px 4px 0' : '0' }));
+    const cls = { Verified: 'pill-pass', Mismatch: 'pill-fail', 'Not claimed': 'pill-neutral' };
+    const sources = [
+      ['Udyam (MSME)', 'All registration fields match the registry.', 'Verified'],
+      ['GSTN', 'Registration active; returns filed to August 2026.', 'Verified'],
+      ['MCA21', 'CIN on documents differs from the registry record.', 'Mismatch'],
+      ['Income Tax PAN', 'Format valid and matches GSTIN digits 3–12.', 'Verified'],
+      ['DigiLocker', 'Sandbox response only.', 'Verified'],
+      ['Debarment registry', 'No debarment order found.', 'Verified'],
+      ['EPFO / ESIC', 'Sandbox response only.', 'Verified'],
+      ['BIS', 'Sandbox response only.', 'Verified'],
+      ['Startup India', 'Not claimed; general enterprise track.', 'Not claimed'],
+      ['NSIC', 'No NSIC number supplied. Udyam alone does not confer NSIC benefits.', 'Not claimed']
+    ].map(([n, m, s]) => ({ n, m, s, cls: cls[s] }));
+    return { navH: 1120, breakdown, sources };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+/* Clausentis v2 — government blue (UI UX Pro Max: Government/Public Service), Lexend + Source Sans 3 */
+body{margin:0;font-family:"Source Sans 3",system-ui,-apple-system,sans-serif;color:#0F172A;background:#F8FAFC;-webkit-font-smoothing:antialiased;font-size:14px}
+a{color:#1D4ED8;text-decoration:none;cursor:pointer;transition:color .2s}a:hover{color:#1E3A8A;text-decoration:underline}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,label:focus-within{outline:2px solid #2563EB;outline-offset:2px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.eyebrow{font-family:"Lexend",sans-serif;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:#1D4ED8}
+.h1{margin:0;font-family:"Lexend",sans-serif;font-size:30px;line-height:1.2;font-weight:600;letter-spacing:-.02em;color:#0F172A}
+.h2{margin:0;font-family:"Lexend",sans-serif;font-size:16px;font-weight:600;letter-spacing:-.005em;color:#0F172A}
+.sub{margin:0;font-size:15px;line-height:1.55;color:#475569}
+.muted{color:#64748B}
+.card{background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.panel{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:8px;font-family:"Source Sans 3",sans-serif;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background-color .2s,border-color .2s,color .2s}
+.btn-primary{background:#1D4ED8;color:#FFFFFF;border:1px solid #1D4ED8}
+.btn-primary:hover{background:#1E40AF;border-color:#1E40AF;color:#FFFFFF;text-decoration:none}
+.btn-secondary{background:#FFFFFF;color:#1E293B;border:1px solid #CBD5E1}
+.btn-secondary:hover{border-color:#1D4ED8;color:#1D4ED8;text-decoration:none}
+.btn-danger{background:#B91C1C;color:#FFFFFF;border:1px solid #B91C1C}
+.btn-onblue{background:#FFFFFF;color:#1E3A8A;border:1px solid #FFFFFF}
+.btn-onblue:hover{background:#DBEAFE;color:#1E3A8A;text-decoration:none}
+.btn-ghostblue{background:transparent;color:#FFFFFF;border:1px solid rgba(255,255,255,.45)}
+.btn-ghostblue:hover{background:rgba(255,255,255,.1);color:#FFFFFF;text-decoration:none}
+.pill{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;border:1px solid;font-size:11px;font-weight:700;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+.pill-pass{background:#ECFDF5;color:#065F46;border-color:#A7F3D0}
+.pill-review{background:#FFFBEB;color:#92400E;border-color:#FDE68A}
+.pill-fail{background:#FEF2F2;color:#991B1B;border-color:#FECACA}
+.pill-neutral{background:#F1F5F9;color:#475569;border-color:#E2E8F0}
+.pill-critical{background:#B91C1C;color:#FFFFFF;border-color:#B91C1C}
+.pill-ink{background:#1D4ED8;color:#FFFFFF;border-color:#1D4ED8}
+/* category chips — always carry their text label */
+.cat{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:6px;font-size:12px;font-weight:600;white-space:nowrap}
+.cat-financial{background:#DBEAFE;color:#1E40AF}
+.cat-experience{background:#FFEDD5;color:#9A3412}
+.cat-statutory{background:#EDE9FE;color:#5B21B6}
+.cat-technical{background:#CFFAFE;color:#155E75}
+.cat-legal{background:#FCE7F3;color:#9D174D}
+.cat-quality{background:#E0E7FF;color:#3730A3}
+/* tinted icon tiles */
+.tile{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;flex-shrink:0}
+.tile-blue{background:#DBEAFE;color:#1D4ED8}.tile-violet{background:#EDE9FE;color:#6D28D9}
+.tile-amber{background:#FEF3C7;color:#B45309}.tile-red{background:#FEE2E2;color:#B91C1C}
+.tile-teal{background:#CCFBF1;color:#0F766E}.tile-green{background:#DCFCE7;color:#15803D}
+.dot{display:inline-block;width:8px;height:8px;border-radius:4px;flex-shrink:0}
+.th{font-family:"Lexend",sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#64748B}
+.tr{border-top:1px solid #EEF2F6;transition:background-color .15s}
+.tr:hover{background:#F8FAFC}
+.input{box-sizing:border-box;height:40px;width:100%;padding:0 12px;border:1px solid #CBD5E1;border-radius:8px;font-family:inherit;font-size:14px;color:#0F172A;background:#FFFFFF}
+.label{font-size:13px;font-weight:600;color:#1E293B}
+.tab{display:inline-flex;align-items:center;height:40px;padding:0 2px;font-size:14px;color:#64748B;border-bottom:2px solid transparent;cursor:pointer}
+.tab:hover{color:#1D4ED8;text-decoration:none}
+.tab-on{color:#1D4ED8;font-weight:600;border-bottom-color:#1D4ED8}
+/* navy officer sidebar */
+.nav-item{display:flex;align-items:center;gap:10px;height:38px;padding:0 12px;border-radius:8px;font-size:14px;color:#CBD5E1;cursor:pointer;transition:background-color .2s,color .2s}
+.nav-item:hover{background:rgba(255,255,255,.07);color:#FFFFFF;text-decoration:none}
+.nav-on{background:#1D4ED8;color:#FFFFFF;font-weight:600}
+/* chart chrome */
+.axis{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;fill:#64748B}
+.clabel{font-family:"Source Sans 3",sans-serif;font-size:13px;fill:#0F172A}
+.cvalue{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;font-weight:600;fill:#0F172A}
+.mark{transition:opacity .2s;cursor:default}
+.mark:hover{opacity:.82}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.sw-pass{background:#047857}.sw-review{background:#F59E0B}.sw-fail{background:#B91C1C}
+.sw-missing{background:repeating-linear-gradient(45deg,#FFFFFF 0 2px,#94A3B8 2px 3px);border:1px solid #94A3B8;box-sizing:border-box}
+.sw-ink{background:#2563EB}.sw-track{background:#E2E8F0}
+@media (prefers-reduced-motion: reduce){*{transition:none !important}}

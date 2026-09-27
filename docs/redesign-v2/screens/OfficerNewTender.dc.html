@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Publish tender</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 1000px; display: flex; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A;">
+  <dc-import name="OfficerNav" active="tenders" height="{{navH}}" hint-size="240px,1000px"></dc-import>
+  <main style="flex-grow: 1; min-width: 0; box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px;">
+    <header style="display: flex; flex-direction: column; gap: 8px;">
+      <a href="OfficerTenders.dc.html" style="font-size: 12px; color: #475569;">← Tenders</a>
+      <h1 class="h1">Publish a tender</h1>
+    </header>
+
+    <ol aria-label="Steps" style="margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
+      <li style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 2px solid #2563EB;"><span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 11px; background: #2563EB; color: #FFFFFF;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span><span style="display: flex; flex-direction: column;"><span style="font-size: 13px; font-weight: 600;">Upload tender document</span><span style="font-size: 11px; color: #64748B;">NIT_CPCL_HPGC-0412.pdf · text extracted</span></span></li>
+      <li aria-current="step" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 2px solid #2563EB; background: #F8FAFC;"><span class="mono" style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 11px; border: 1.5px solid #2563EB; font-size: 11px; font-weight: 700;">2</span><span style="display: flex; flex-direction: column;"><span style="font-size: 13px; font-weight: 600;">Confirm extracted clauses</span><span style="font-size: 11px; color: #64748B;">AI found 10 eligibility clauses</span></span></li>
+      <li style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 2px solid #E2E8F0;"><span class="mono" style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 11px; border: 1.5px solid #CBD5E1; color: #64748B; font-size: 11px; font-weight: 700;">3</span><span style="display: flex; flex-direction: column;"><span style="font-size: 13px; font-weight: 600; color: #475569;">Publish &amp; open for bids</span><span style="font-size: 11px; color: #64748B;">Bidders can start checking</span></span></li>
+    </ol>
+
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start;">
+      <section aria-label="Extracted clauses" class="card" style="overflow: hidden;">
+        <div style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <h2 class="h2">Check each clause before publishing</h2>
+            <span style="font-size: 12px; color: #64748B;">These rules drive every automated check. Edit anything the AI read wrongly.</span>
+          </div>
+          <button type="button" class="btn btn-secondary" style="height: 34px;">+ Add clause</button>
+        </div>
+        <div class="th" style="display: grid; grid-template-columns: 76px minmax(0, 2fr) 96px minmax(0, 1.2fr) minmax(0, 1.3fr) 82px; gap: 12px; padding: 10px 20px; background: #F8FAFC; border-top: 1px solid #E2E8F0; border-bottom: 1px solid #E2E8F0;">
+          <span>Clause</span><span>Requirement</span><span>Category</span><span>Rule</span><span>Evidence expected</span><span>Mandatory</span>
+        </div>
+        <sc-for list="{{reqs}}" as="r" hint-placeholder-count="10">
+          <div class="tr" style="display: grid; grid-template-columns: 76px minmax(0, 2fr) 96px minmax(0, 1.2fr) minmax(0, 1.3fr) 82px; gap: 12px; align-items: center; padding: 11px 20px; font-size: 12px;">
+            <span class="mono" style="color: #475569;">{{r.clause}}</span>
+            <span style="font-weight: 600; font-size: 13px;">{{r.title}}</span>
+            <span><span class="cat {{r.catCls}}">{{r.cat}}</span></span>
+            <span class="mono" style="font-size: 11px;">{{r.rule}}</span>
+            <span class="mono" style="font-size: 11px; color: #475569; overflow-wrap: anywhere;">{{r.doc}}</span>
+            <label style="display: inline-flex; align-items: center; gap: 6px; min-height: 32px;"><input type="checkbox" checked="{{r.mandatory}}"> <span>{{r.mLabel}}</span></label>
+          </div>
+        </sc-for>
+      </section>
+
+      <aside style="display: flex; flex-direction: column; gap: 16px;">
+        <section aria-label="Clauses by category" class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+          <h2 class="h2" style="font-size: 14px;">Clauses by category</h2>
+          <sc-for list="{{cats}}" as="c" hint-placeholder-count="6">
+            <div style="display: grid; grid-template-columns: 92px minmax(0, 1fr) 16px; gap: 10px; align-items: center; font-size: 12px;">
+              <span><span class="cat {{c.cls}}">{{c.name}}</span></span>
+              <span style="display: block; height: 10px; position: relative;"><span class="mark" title="{{c.name}}: {{c.n}} clauses" style="position: absolute; left: 0; top: 0; display: block; width: {{c.w}}px; height: 10px; background: {{c.fill}}; border-radius: 0 4px 4px 0;"></span></span>
+              <span class="mono" style="font-weight: 600; text-align: right;">{{c.n}}</span>
+            </div>
+          </sc-for>
+        </section>
+        <section aria-label="Tender details" class="panel" style="padding: 18px; display: flex; flex-direction: column; gap: 10px; font-size: 12px;">
+          <h2 class="h2" style="font-size: 14px;">Read from the document</h2>
+          <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 8px;">
+            <span style="color: #64748B;">Reference</span><span class="mono">CPCL/ENG/2026/HPGC-0412</span>
+            <span style="color: #64748B;">Closes</span><span>28 Sep 2026, 15:00 IST</span>
+            <span style="color: #64748B;">Estimate</span><span>₹14.50 Cr</span>
+            <span style="color: #64748B;">EMD</span><span>₹29,00,000 · MSE exempt</span>
+          </div>
+        </section>
+        <div style="display: flex; gap: 8px;">
+          <a href="OfficerTenders.dc.html" class="btn btn-secondary" style="flex-grow: 1;">Save draft</a>
+          <a href="OfficerTenderWorkspace.dc.html" class="btn btn-primary" style="flex-grow: 1;">Continue</a>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const CAT = { Financial: ['cat-financial', '#1E40AF'], Experience: ['cat-experience', '#C2410C'], Statutory: ['cat-statutory', '#6D28D9'], Technical: ['cat-technical', '#0E7490'], Legal: ['cat-legal', '#BE185D'], Quality: ['cat-quality', '#4338CA'] };
+    const reqs = [
+      ['4.1', 'Average 3-year turnover ≥ ₹10.00 Cr', 'Financial', 'MINIMUM_VALUE', 'Financial_Statement.pdf', true],
+      ['4.2', 'Operational experience ≥ 5 years (≥ 120 bar(g))', 'Experience', 'YEARS_EXPERIENCE', 'Experience_Certificate.pdf', true],
+      ['2.1', 'Active GST registration (REG-06)', 'Statutory', 'DOCUMENT_REQUIRED', 'GST_Certificate.pdf', true],
+      ['2.2', 'Valid PAN allotment', 'Statutory', 'DOCUMENT_REQUIRED', 'PAN_Document.pdf', true],
+      ['7.1', '₹29L EMD or Udyam MSME exemption', 'Financial', 'DOCUMENT_REQUIRED', 'Udyam_Certificate.pdf', true],
+      ['5.1', 'Direct OEM authorization (10-yr spares, SIL-3)', 'Technical', 'DOCUMENT_REQUIRED', 'OEM_Authorization.pdf', true],
+      ['6.3', 'Make in India local content ≥ 50% (Class-I)', 'Statutory', 'PERCENTAGE_THRESHOLD', 'Local_Content_Declaration.pdf', true],
+      ['3.4', 'Non-blacklisting affidavit (Annexure-B)', 'Legal', 'DOCUMENT_REQUIRED', 'Non_Debarment_Declaration.pdf', true],
+      ['8.2', 'ISO 9001:2015 valid on 28 Sep 2026', 'Quality', 'DATE_VALIDITY', 'ISO_Quality_Certificate.pdf', false],
+      ['5.4', 'API 618 5th Ed conformance', 'Technical', 'DOCUMENT_REQUIRED', 'Technical_Compliance_Datasheet.pdf', true]
+    ].map(([clause, title, cat, rule, doc, mandatory]) => ({ clause, title, cat, catCls: CAT[cat][0], rule, doc, mandatory, mLabel: mandatory ? 'Yes' : 'No' }));
+    const counts = {};
+    reqs.forEach((r) => { counts[r.cat] = (counts[r.cat] || 0) + 1; });
+    const cats = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([name, n]) => ({ name, n, w: n * 40, cls: CAT[name][0], fill: CAT[name][1] }));
+    return { navH: 1000, reqs, cats };
+  }
+}
+</script>
+</body>
+</html>

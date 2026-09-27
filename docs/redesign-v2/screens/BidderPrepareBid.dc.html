@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Prepare and check bid</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width: 1440px; height: 1240px; background: #F8FAFC; font-family: 'Source Sans 3', system-ui, sans-serif; color: #0F172A; display: flex; flex-direction: column;">
+  <dc-import name="BidderNav" active="bids" hint-size="1440px,64px"></dc-import>
+  <main style="box-sizing: border-box; padding: 28px 40px; display: flex; flex-direction: column; gap: 18px;">
+    <header style="display: flex; flex-direction: column; gap: 8px;">
+      <a href="BidderTenderDetail.dc.html" style="font-size: 12px; color: #475569;">← CPCL/ENG/2026/HPGC-0412</a>
+      <h1 class="h1">Check your bid before you submit</h1>
+    </header>
+
+    <ol aria-label="Steps" style="margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px;">
+      <li style="display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 2px solid #2563EB;"><span class="mono" style="font-size: 10px; color: #475569;">STEP 1 · DONE</span><span style="font-size: 13px; font-weight: 600;">Upload documents</span></li>
+      <li aria-current="step" style="display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 2px solid #2563EB;"><span class="mono" style="font-size: 10px; color: #475569;">STEP 2 · CHECK 1</span><span style="font-size: 13px; font-weight: 600;">Automated check</span></li>
+      <li style="display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 2px solid #E2E8F0;"><span class="mono" style="font-size: 10px; color: #64748B;">STEP 3</span><span style="font-size: 13px; font-weight: 600; color: #475569;">Fix issues</span></li>
+      <li style="display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 2px solid #E2E8F0;"><span class="mono" style="font-size: 10px; color: #64748B;">STEP 4</span><span style="font-size: 13px; font-weight: 600; color: #475569;">Seal &amp; submit</span></li>
+    </ol>
+
+    <section aria-label="Readiness" style="display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px;">
+      <div class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+        <span class="eyebrow">Readiness</span>
+        <span style="display: flex; align-items: baseline; gap: 6px;"><span style="font-size: 56px; line-height: 1; font-weight: 600;">49</span><span style="font-size: 16px; color: #64748B;">/ 100</span></span>
+        <span><span class="pill pill-fail">Blocked · 2 issues</span></span>
+        <span style="display: flex; gap: 2px; height: 10px;">
+          <span title="8 met" style="flex: 8 1 0; background: #047857;"></span>
+          <span title="1 review" style="flex: 1 1 0; background: #F59E0B;"></span>
+          <span title="1 failed" style="flex: 1 1 0; background: #B91C1C;"></span>
+          <span title="1 missing" style="flex: 1 1 0; background: repeating-linear-gradient(45deg,#FFFFFF 0 2px,#94A3B8 2px 3px); border-radius: 0 4px 4px 0;"></span>
+        </span>
+        <span style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; font-size: 11px; color: #475569;">
+          <span style="display: flex; align-items: center; gap: 6px;"><span class="swatch sw-pass"></span>8 met</span>
+          <span style="display: flex; align-items: center; gap: 6px;"><span class="swatch sw-review"></span>1 review</span>
+          <span style="display: flex; align-items: center; gap: 6px;"><span class="swatch sw-fail"></span>1 failed</span>
+          <span style="display: flex; align-items: center; gap: 6px;"><span class="swatch sw-missing"></span>1 missing</span>
+        </span>
+      </div>
+      <div class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; border-color: #FECACA;">
+        <span style="display: flex; justify-content: space-between; align-items: center;"><h2 class="h2">Your documents disagree about turnover</h2><span class="pill pill-fail">Blocks submission</span></span>
+        <span style="font-size: 13px; color: #475569;">The officer will see this contradiction. Upload the correct audited statement, or correct your declaration.</span>
+        <svg width="760" height="92" viewBox="0 0 760 92" role="img" aria-label="Audited turnover 8.72 crore, declared 12.40 crore, tender minimum 10 crore">
+          <line x1="150" y1="84" x2="740" y2="84" stroke="#E2E8F0" stroke-width="1"></line>
+          <g class="mark"><title>Audited statement: ₹8.72 Cr</title>
+            <text x="0" y="22" class="clabel" style="font-weight: 600;">Audited statement</text>
+            <rect x="150" y="10" width="{{aW}}" height="16" fill="#2563EB"></rect>
+            <text x="{{aX}}" y="23" class="cvalue">₹8.72 Cr</text></g>
+          <g class="mark"><title>Your declaration: ₹12.40 Cr</title>
+            <text x="0" y="56" class="clabel" style="font-weight: 600;">Your declaration</text>
+            <rect x="150" y="44" width="{{dW}}" height="16" fill="#FFFFFF" stroke="#0F172A" stroke-width="1.5"></rect>
+            <text x="{{dX}}" y="57" class="cvalue">₹12.40 Cr</text></g>
+          <line x1="{{mX}}" y1="2" x2="{{mX}}" y2="70" stroke="#B91C1C" stroke-width="2"></line>
+          <text x="{{mX}}" y="82" class="axis" text-anchor="middle" style="fill: #991B1B; font-weight: 700;">MIN ₹10 CR</text>
+        </svg>
+      </div>
+    </section>
+
+    <div style="display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start;">
+      <section aria-label="Requirements" class="card" style="overflow: hidden;">
+        <div style="padding: 16px 20px 10px; display: flex; justify-content: space-between;"><h2 class="h2">Requirements</h2><span style="font-size: 12px; color: #475569;">8 of 11 met</span></div>
+        <div class="th" style="display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.6fr) 96px 96px; gap: 12px; padding: 8px 20px; background: #F8FAFC; border-top: 1px solid #E2E8F0; border-bottom: 1px solid #E2E8F0;"><span>Requirement</span><span>What we found</span><span>Status</span><span></span></div>
+        <sc-for list="{{items}}" as="it" hint-placeholder-count="11">
+          <div class="tr" style="display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.6fr) 96px 96px; gap: 12px; align-items: center; padding: 10px 20px; font-size: 12px; min-height: 44px; box-sizing: border-box;">
+            <span style="font-weight: 600;">{{it.t}}</span>
+            <span style="color: #334155;">{{it.f}}</span>
+            <span><span class="pill {{it.cls}}">{{it.s}}</span></span>
+            <sc-if value="{{it.a}}" hint-placeholder-val="{{false}}"><a href="#" class="btn btn-secondary" style="height: 32px; font-size: 12px;">{{it.a}}</a></sc-if>
+          </div>
+        </sc-for>
+      </section>
+
+      <aside style="display: flex; flex-direction: column; gap: 16px;">
+        <section aria-label="Upload" class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 12px;">
+          <h2 class="h2">Add or replace documents</h2>
+          <label for="up" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 150px; border: 1.5px dashed #CBD5E1; border-radius: 8px; background: #F8FAFC; font-size: 13px; color: #475569; cursor: pointer; text-align: center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0F172A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"></path><path d="M7 9l5-5 5 5"></path><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"></path></svg>
+            <span>Drop PDFs or <strong style="color: #0F172A;">browse</strong></span>
+            <span style="font-size: 11px; color: #64748B;">Up to 25 MB each</span>
+          </label>
+          <input id="up" type="file" accept="application/pdf" multiple style="position: absolute; width: 1px; height: 1px; opacity: 0;">
+          <span style="font-size: 12px; color: #475569;">Values are read from the file itself. Anything we can't read goes to the officer as "review", never guessed.</span>
+        </section>
+        <section class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 10px;">
+          <a href="#" class="btn btn-secondary" style="height: 44px;">Run check again</a>
+          <button type="button" disabled class="btn" style="height: 44px; background: #F1F5F9; color: #94A3B8; border: 1px solid #E2E8F0; cursor: not-allowed;">Seal &amp; submit</button>
+          <span style="font-size: 11px; color: #64748B;">Fix the 2 blocking issues to submit.</span>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const px = 40; // px per crore
+    const cls = { Met: 'pill-pass', Review: 'pill-review', Failed: 'pill-fail', Missing: 'pill-fail' };
+    const items = [
+      ['Average turnover ≥ ₹10 Cr', '₹8.72 Cr audited · ₹12.40 Cr declared', 'Failed', 'Replace'],
+      ['Non-blacklisting affidavit', 'Not uploaded', 'Missing', 'Upload'],
+      ['Local content (Make in India)', 'Not uploaded · no purchase preference', 'Review', 'Upload'],
+      ['Positive net worth', '₹4.20 Cr', 'Met'],
+      ['≥ 5 years similar experience', '7 years', 'Met'],
+      ['≥ 3 similar work orders', '3 completion certificates', 'Met'],
+      ['Technical specification', 'No deviations declared', 'Met'],
+      ['OEM authorization', 'Direct OEM, 10-year spares', 'Met'],
+      ['GST registration & returns', 'Active · returns current', 'Met'],
+      ['PAN', 'AABCA1234F · matches GSTIN', 'Met'],
+      ['EMD or MSME exemption', 'Udyam registry match', 'Met']
+    ].map(([t, f, s, a]) => ({ t, f, s, a: a || '', cls: cls[s] }));
+    return { items, aW: 8.72 * px, aX: 150 + 8.72 * px + 8, dW: 12.4 * px, dX: 150 + 12.4 * px + 8, mX: 150 + 10 * px };
+  }
+}
+</script>
+</body>
+</html>
