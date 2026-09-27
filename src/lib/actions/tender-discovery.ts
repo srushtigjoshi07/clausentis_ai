@@ -545,40 +545,127 @@ export async function getMyBidSubmissionsAction(): Promise<BidSubmissionRecord[]
 // 6. Manage Bidder Profile
 // ─────────────────────────────────────────────────────────────
 
-export async function getBidderProfileAction(): Promise<BidderProfile> {
+function declaredCapability(meta: Record<string, unknown> | undefined): Pick<BidderProfile, 'annualTurnoverInCr' | 'relevantExperienceYears' | 'localContentPercent'> {
+  const num = (v: unknown) => {
+    const n = typeof v === 'number' ? v : typeof v === 'string' ? parseFloat(v) : NaN;
+    return Number.isFinite(n) && n >= 0 ? n : undefined;
+  };
+  return {
+    annualTurnoverInCr: num(meta?.declared_turnover_cr),
+    relevantExperienceYears: num(meta?.declared_experience_years),
+    localContentPercent: num(meta?.declared_local_content_pct),
+  };
+}
+
+/**
+ * The signed-in bidder's saved company profile, or null when they have not saved one.
+ * Declared capability (turnover, experience, local content) is self-declared and only used
+ * for eligibility pre-checks; the engine verifies figures from documents.
+ */
+export async function getSavedBidderProfileAction(): Promise<BidderProfile | null> {
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+    if (!user) return null;
 
-    if (user) {
-      const { data } = await supabase
-        .from('bidder_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (data) {
-        return {
-          companyName: String(data.company_name || ''),
-          registrationNumber: String(data.registration_number || ''),
-          gstin: String(data.gstin || ''),
-          pan: String(data.pan || ''),
-          udyamNumber: data.udyam_number ? String(data.udyam_number) : undefined,
-          entityType: (data.entity_type as BidderProfile['entityType']) || 'Private Limited',
-          registeredAddress: String(data.registered_address || ''),
-          contactPerson: String(data.contact_person || ''),
-          contactEmail: String(data.contact_email || user.email || ''),
-          contactPhone: String(data.contact_phone || ''),
-        };
-      }
-    }
+    const { data } = await supabase
+      .from('bidder_profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!data) return null;
+    return {
+      companyName: String(data.company_name || ''),
+      registrationNumber: String(data.registration_number || ''),
+      gstin: String(data.gstin || ''),
+      pan: String(data.pan || ''),
+      udyamNumber: data.udyam_number ? String(data.udyam_number) : undefined,
+      entityType: (data.entity_type as BidderProfile['entityType']) || 'Private Limited',
+      registeredAddress: String(data.registered_address || ''),
+      contactPerson: String(data.contact_person || ''),
+      contactEmail: String(data.contact_email || user.email || ''),
+      contactPhone: String(data.contact_phone || ''),
+      ...declaredCapability(user.user_metadata),
+    };
   } catch (err) {
     console.warn('[TenderDiscovery] Bidder profile query fallback:', err);
+    return null;
+  }
+}
+
+export async function getBidderProfileAction(): Promise<BidderProfile> {
+  const saved = await getSavedBidderProfileAction();
+  return saved ?? getDemoBidderProfile();
+}
+
+/** Saves the signed-in bidder's company profile (own row only; RLS enforces ownership). */
+export async function saveBidderProfileAction(
+  input: Omit<BidderProfile, 'entityType'> & { entityType?: BidderProfile['entityType'] }
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'Please sign in to save your profile.' };
+
+  const { data: roleRow } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+  if (roleRow?.role === 'tender_authority') {
+    return { success: false, error: 'Company profiles are for bidder accounts.' };
   }
 
-  return getDemoBidderProfile();
+  const companyName = (input.companyName || '').trim();
+  if (!companyName) return { success: false, error: 'Company legal name is required.' };
+  const gstin = (input.gstin || '').trim().toUpperCase();
+  if (gstin && !/^[0-9A-Z]{15}$/.test(gstin)) return { success: false, error: 'GSTIN must be 15 letters and digits.' };
+  const pan = (input.pan || '').trim().toUpperCase();
+  if (pan && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) return { success: false, error: 'PAN must look like ABCDE1234F.' };
+
+  const row = {
+    user_id: user.id,
+    company_name: companyName,
+    registration_number: (input.registrationNumber || '').trim() || null,
+    gstin: gstin || null,
+    pan: pan || null,
+    udyam_number: (input.udyamNumber || '').trim() || null,
+    entity_type: input.entityType || 'Private Limited',
+    registered_address: (input.registeredAddress || '').trim() || null,
+    contact_person: (input.contactPerson || '').trim() || null,
+    contact_email: (input.contactEmail || user.email || '').trim() || null,
+    contact_phone: (input.contactPhone || '').trim() || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data: existing } = await supabase
+    .from('bidder_profiles')
+    .select('id')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { error } = existing?.id
+    ? await supabase.from('bidder_profiles').update(row).eq('id', existing.id).eq('user_id', user.id)
+    : await supabase.from('bidder_profiles').insert(row);
+  if (error) return { success: false, error: error.message };
+
+  // Declared capability is self-reported (never used for authorization), kept in user metadata.
+  const clamp = (n: number | undefined, max: number) => (typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= max ? n : null);
+  await supabase.auth.updateUser({
+    data: {
+      declared_turnover_cr: clamp(input.annualTurnoverInCr, 100000),
+      declared_experience_years: clamp(input.relevantExperienceYears, 200),
+      declared_local_content_pct: clamp(input.localContentPercent, 100),
+    },
+  });
+
+  try {
+    revalidatePath('/bidder', 'layout');
+  } catch {
+    // outside request scope
+  }
+  return { success: true };
 }

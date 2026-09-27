@@ -99,6 +99,8 @@ export interface BidderProfile {
   contactPhone: string;
   annualTurnoverInCr?: number;
   relevantExperienceYears?: number;
+  /** Self-declared Make in India local content, percent. */
+  localContentPercent?: number;
 }
 
 export type DocumentProcessingLifecycle =

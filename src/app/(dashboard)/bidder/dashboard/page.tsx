@@ -1,388 +1,217 @@
-import React from 'react';
 import Link from 'next/link';
-import { 
-  Building2, 
-  Search, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Clock, 
-  ArrowRight, 
-  ShieldCheck,
-  FileSpreadsheet,
-  FileCheck2,
-  Inbox,
-  ExternalLink
-} from 'lucide-react';
-import { getTenderSource } from '@/lib/tender-discovery/tender-source';
-import { getMyBidSubmissionsAction } from '@/lib/actions/tender-discovery';
-import { Button } from '@/components/ui/button';
+import { getSavedBidderProfileAction, searchActiveTendersAction } from '@/lib/actions/tender-discovery';
+import { getBidderDocuments } from '@/lib/actions/documents';
+import { eligibilityFor, listMySubmissions } from '@/lib/views/bidder';
+import { EmptyState, KpiTile, Legend, PageBody, RawPill, SummaryBand } from '@/components/v2/ui';
+import { decisionLabel, decisionPill, daysUntil, formatDate, relativeDays } from '@/components/v2/status';
 
-export const metadata = {
-  title: 'Bidder Dashboard - Clausentis',
-  description: 'Enterprise Bidder Workspace and Procurement Compliance Command Center',
-};
-
+export const metadata = { title: 'Home · Clausentis bidder portal' };
 export const dynamic = 'force-dynamic';
 
-export default async function BidderDashboardPage() {
-  const tenderSource = getTenderSource('imported');
-  const [searchResult, myBids] = await Promise.all([
-    tenderSource.searchTenders({}),
-    getMyBidSubmissionsAction(),
+export default async function BidderHomePage() {
+  const now = new Date();
+  const [profile, subs, search, docs] = await Promise.all([
+    getSavedBidderProfileAction(),
+    listMySubmissions(),
+    searchActiveTendersAction({}),
+    getBidderDocuments(),
   ]);
+  const tenders = [...search.tenders].sort((a, b) => (daysUntil(a.closingDate, now) ?? 0) - (daysUntil(b.closingDate, now) ?? 0));
+  const elig = tenders.map((t) => ({ t, e: eligibilityFor(t, profile) }));
+  const qualifyCount = elig.filter((x) => x.e.status === 'qualify').length;
+  const decided = subs.filter((s) => s.decision);
+  const latest = subs[0];
+  const submittedTenderIds = new Set(subs.map((s) => s.record.tenderId));
+  const nextQualifying = elig.find((x) => x.e.status === 'qualify' && !submittedTenderIds.has(x.t.tenderId));
+  const you = profile?.annualTurnoverInCr ?? null;
 
-  const activeTenders = searchResult.tenders || [];
-  const submittedBidsCount = myBids.length;
+  const title = latest?.decision
+    ? `Your ${latest.record.tenderReference.split('/')[0]} bid: ${decisionLabel(latest.decision.code).toLowerCase()}`
+    : latest
+      ? `Your ${latest.record.tenderReference.split('/')[0]} bid is with the procurement officer`
+      : 'Find a tender and check your bid before you submit';
+  const sub = nextQualifying
+    ? `You meet the declared minimums for ${nextQualifying.t.referenceNumber}, closing ${formatDate(nextQualifying.t.closingDate, { day: 'numeric', month: 'short' })}.`
+    : !profile || you === null
+      ? 'Add your declared turnover and experience to your company profile to see which tenders you qualify for.'
+      : `${tenders.length} open tender${tenders.length === 1 ? '' : 's'} on the catalogue.`;
 
-  const metrics = {
-    activeBids: submittedBidsCount,
-    complianceScore: submittedBidsCount > 0 
-      ? Math.round(myBids.reduce((acc, b) => acc + (b.complianceScore || 0), 0) / submittedBidsCount)
-      : 94,
-    attentionRequired: 1,
-    openOpportunities: activeTenders.length,
-  };
+  const maxNeed = Math.max(you ?? 0, ...tenders.map((t) => t.minimumTurnoverRequired), 1) * 1.1;
+  const steps = latest
+    ? [
+        { t: 'Submitted and sealed', d: `${formatDate(latest.record.submittedAt)} · SHA-256 recorded`, done: true },
+        { t: 'Verified by Clausentis', d: `Readiness ${latest.record.complianceScore}/100 · check v${latest.record.verificationVersion}`, done: true },
+        {
+          t: latest.decision ? `${decisionLabel(latest.decision.code)} by the procurement officer` : 'Officer decision pending',
+          d: latest.decision ? `Signed ${formatDate(latest.decision.signedAt)}` : 'You will see the decision here once it is signed',
+          done: Boolean(latest.decision),
+        },
+      ]
+    : [];
 
   return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto pb-12 font-sans bg-white">
-      
-      {/* 1. PAGE HEADER */}
-      <div className="rounded-xl border border-[#E5E5E5] bg-white p-6 sm:p-7">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div className="space-y-1.5 max-w-2xl">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.16em] text-[#111111] bg-[#F5F5F5] px-2 py-0.5 rounded border border-[#E5E5E5]">
-                BIDDER WORKSPACE
-              </span>
-              <span className="text-[#777777] text-xs">&bull;</span>
-              <span className="text-[#555555] text-xs font-mono">Apex Heavy Engineering Pvt Ltd</span>
-            </div>
-            
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#111111]">
-              Dashboard
-            </h1>
-            
-            <p className="text-xs sm:text-sm text-[#555555]">
-              Welcome back. Track active bid readiness, documentary compliance, and recommended government tenders.
-            </p>
-          </div>
+    <PageBody className="max-w-none">
+      <SummaryBand
+        eyebrow={`Home · ${formatDate(now.toISOString())}`}
+        title={title}
+        sub={sub}
+        actions={
+          <>
+            {latest ? (
+              <Link href={`/bidder/bids/${encodeURIComponent(latest.record.submissionId)}/receipt`} className="btn btn-ghostblue">
+                {latest.decision ? 'View decision' : 'View receipt'}
+              </Link>
+            ) : null}
+            <Link href="/bidder/tenders" className="btn btn-onblue">Find tenders</Link>
+          </>
+        }
+      />
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Link href="/bidder/government-verification">
-              <Button className="h-9 px-4 bg-[#111111] hover:bg-[#222222] text-white font-medium text-xs tracking-wide gap-2 cursor-pointer shadow-xs">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Verify Government Records
-              </Button>
-            </Link>
-            <Link href="/bidder/tenders">
-              <Button variant="outline" className="h-9 px-3.5 border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] text-[#111111] font-medium text-xs tracking-wide gap-2 cursor-pointer">
-                <Search className="h-3.5 w-3.5 stroke-[1.5]" />
-                Find Tenders
-              </Button>
-            </Link>
-            <Link href="/bidder/documents">
-              <Button variant="outline" className="h-9 px-3.5 border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] text-[#111111] font-medium text-xs gap-1.5 cursor-pointer">
-                <FileSpreadsheet className="h-3.5 w-3.5 text-[#555555]" />
-                Vault Documents
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
+      <section aria-label="Key figures" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiTile label="Bids submitted" value={subs.length} icon="send" tone="blue" note={latest ? latest.record.tenderReference : 'None yet'} />
+        <KpiTile
+          label="Decisions received"
+          value={decided.length}
+          icon="check"
+          tone="green"
+          badge={decided[0]?.decision ? <RawPill cls={decisionPill(decided[0].decision.code)}>{decisionLabel(decided[0].decision.code)}</RawPill> : undefined}
+          note={decided[0]?.decision ? `Signed ${formatDate(decided[0].decision.signedAt)}` : 'None yet'}
+        />
+        <KpiTile
+          label="Open tenders you qualify for"
+          value={profile && you !== null ? qualifyCount : '—'}
+          unit={profile && you !== null ? `of ${tenders.length}` : undefined}
+          icon="search"
+          tone="violet"
+          note={profile && you !== null ? 'Based on your declared figures' : 'Add declared figures to your profile'}
+        />
+        <KpiTile label="Documents in vault" value={docs.length} icon="folder" tone="amber" note={docs.length ? 'Reusable across bids' : 'Upload once, reuse in every bid'} />
+      </section>
 
-      {/* GOVERNMENT RECORD VERIFICATION GATEWAY BANNER */}
-      <div className="rounded-xl border border-[#E5E5E5] bg-[#FAFAFA] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-lg bg-white border border-[#E5E5E5] flex items-center justify-center shrink-0 shadow-2xs">
-            <ShieldCheck className="w-5 h-5 text-[#111111]" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-sm font-semibold text-[#111111]">
-                Statutory Government Verification Gateway
-              </h3>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#FFFBEB] text-[#92400E] border border-[#FDE68A] font-semibold">
-                DEMO / SANDBOX
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <section aria-label="Turnover eligibility" className="card flex flex-col gap-3.5 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-col gap-1">
+              <h2 className="h2">Minimum turnover by open tender</h2>
+              <span className="text-xs text-fg-3">
+                {you !== null ? `The line is your declared turnover, ₹${you.toFixed(2)} Cr` : 'Declare your turnover in your profile to compare'}
               </span>
             </div>
-            <p className="text-xs text-[#555555] mt-0.5">
-              Cross-verify enterprise identity against Udyam (MSME), GSTN, and MCA21 corporate registries with deterministic field comparison.
-            </p>
+            <Legend
+              items={
+                you !== null
+                  ? [
+                      { label: 'Within reach', swatch: 'ink' },
+                      { label: 'Above yours', swatch: 'track' },
+                      { label: 'Your turnover', swatch: 'line' },
+                    ]
+                  : [{ label: 'Tender minimum', swatch: 'ink' }]
+              }
+            />
           </div>
-        </div>
-        <Link href="/bidder/government-verification">
-          <Button variant="outline" className="h-9 px-4 border-[#E5E5E5] bg-white hover:bg-[#F0F0F0] text-[#111111] font-medium text-xs tracking-wide gap-2 shrink-0 cursor-pointer">
-            Run Gateway Check &rarr;
-          </Button>
-        </Link>
-      </div>
-
-      {/* 2. KPI STATUS TILES */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Active Bids */}
-        <div className="p-5 rounded-xl border border-[#E5E5E5] bg-white hover:border-[#111111] transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase font-mono tracking-wider text-[#777777]">
-              Active Bids
-            </span>
-            <div className="w-7 h-7 rounded-md bg-[#F5F5F5] text-[#555555] flex items-center justify-center">
-              <FileCheck2 className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="mt-2.5 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-[#111111] font-mono">
-              {metrics.activeBids}
-            </span>
-            <span className="text-xs text-[#555555] font-medium">Submitted</span>
-          </div>
-          <p className="text-[11px] text-[#777777] mt-1">Cryptographically registered</p>
-        </div>
-
-        {/* Compliance Readiness */}
-        <div className="p-5 rounded-xl border border-[#E5E5E5] bg-white hover:border-[#111111] transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase font-mono tracking-wider text-[#777777]">
-              Compliance Score
-            </span>
-            <div className="w-7 h-7 rounded-md bg-[#F5F5F5] text-[#555555] flex items-center justify-center">
-              <ShieldCheck className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="mt-2.5 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-[#111111] font-mono">
-              {metrics.complianceScore}%
-            </span>
-            <span className="text-xs text-[#555555] font-medium">Avg Readiness</span>
-          </div>
-          <p className="text-[11px] text-[#777777] mt-1">Documentary verification</p>
-        </div>
-
-        {/* Issues Requiring Attention */}
-        <div className="p-5 rounded-xl border border-[#E5E5E5] bg-white hover:border-[#111111] transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase font-mono tracking-wider text-[#777777]">
-              Action Required
-            </span>
-            <div className="w-7 h-7 rounded-md bg-[#F5F5F5] text-[#555555] flex items-center justify-center">
-              <AlertTriangle className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="mt-2.5 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-[#111111] font-mono">
-              {metrics.attentionRequired}
-            </span>
-            <span className="text-xs text-[#555555] font-medium">Item pending</span>
-          </div>
-          <p className="text-[11px] text-[#777777] mt-1">Update non-blacklisting affidavit</p>
-        </div>
-
-        {/* Open Opportunities */}
-        <div className="p-5 rounded-xl border border-[#E5E5E5] bg-white hover:border-[#111111] transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] uppercase font-mono tracking-wider text-[#777777]">
-              Open Tenders
-            </span>
-            <div className="w-7 h-7 rounded-md bg-[#F5F5F5] text-[#555555] flex items-center justify-center">
-              <Building2 className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="mt-2.5 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-[#111111] font-mono">
-              {metrics.openOpportunities}
-            </span>
-            <span className="text-xs text-[#555555] font-medium">Live PSU</span>
-          </div>
-          <p className="text-[11px] text-[#777777] mt-1">Central portal opportunities</p>
-        </div>
-      </div>
-
-      {/* 3. RECENT BIDS SECTION */}
-      <div className="rounded-xl border border-[#E5E5E5] bg-white overflow-hidden">
-        <div className="p-5 border-b border-[#E5E5E5] flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <FileCheck2 className="w-4 h-4 text-[#111111]" />
-              <h2 className="text-sm sm:text-base font-semibold text-[#111111]">
-                Recent Bids &amp; Submissions
-              </h2>
-            </div>
-            <p className="text-xs text-[#555555] mt-0.5">
-              Status and verification receipts for your active procurement packages
-            </p>
-          </div>
-
-          <Link href="/bidder/bids" className="inline-flex items-center gap-1 text-xs text-[#111111] hover:underline font-medium">
-            <span>All Bids</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        {myBids.length === 0 ? (
-          <div className="p-10 text-center flex flex-col items-center justify-center">
-            <div className="h-10 w-10 rounded-xl bg-[#F7F7F7] border border-[#E5E5E5] flex items-center justify-center text-[#555555] mb-3">
-              <Inbox className="h-5 w-5 stroke-[1.5]" />
-            </div>
-            <h3 className="font-medium text-sm text-[#111111]">No bids submitted yet.</h3>
-            <p className="text-xs text-[#555555] mt-1 mb-4 max-w-sm">
-              Explore active public tenders below to prepare and submit your first verified bid package.
-            </p>
-            <Link href="/bidder/tenders">
-              <Button size="sm" className="bg-[#111111] hover:bg-[#222222] text-white font-medium text-xs px-4 h-8">
-                Explore Tenders &rarr;
-              </Button>
-            </Link>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-[#E5E5E5] bg-[#F7F7F7] text-[#555555] uppercase font-mono text-[10px] tracking-wider">
-                  <th className="py-3 px-4 font-medium">Submission ID</th>
-                  <th className="py-3 px-4 font-medium">Tender Title</th>
-                  <th className="py-3 px-4 font-medium">Organisation</th>
-                  <th className="py-3 px-4 font-medium">Readiness</th>
-                  <th className="py-3 px-4 font-medium">Status</th>
-                  <th className="py-3 px-4 font-medium text-right">Receipt</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E5E5E5]">
-                {myBids.slice(0, 4).map((bid) => (
-                  <tr key={bid.submissionId} className="hover:bg-[#F7F7F7] transition-colors">
-                    <td className="py-3.5 px-4 font-mono text-[11px] text-[#111111]">
-                      {bid.submissionId}
-                    </td>
-                    <td className="py-3.5 px-4 max-w-xs truncate font-medium text-[#111111]">
-                      {bid.tenderTitle}
-                    </td>
-                    <td className="py-3.5 px-4 text-[#555555] whitespace-nowrap">
-                      {bid.issuingOrganisation}
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span className="font-mono text-xs font-semibold text-[#111111]">
-                        {bid.complianceScore}%
+          {tenders.length ? (
+            <div className="relative" role="img" aria-label={`Minimum turnover: ${tenders.map((t) => `${t.referenceNumber.split('/')[0]} ₹${t.minimumTurnoverRequired} Cr`).join(', ')}${you !== null ? `; your turnover ₹${you} Cr` : ''}`}>
+              <ul className="m-0 flex list-none flex-col gap-4 p-0">
+                {tenders.map((t) => {
+                  const within = you === null || t.minimumTurnoverRequired <= you;
+                  return (
+                    <li key={t.id} className="grid grid-cols-[96px_minmax(0,1fr)] items-center gap-3" title={`${t.referenceNumber} requires ₹${t.minimumTurnoverRequired} Cr${you !== null ? `; you declared ₹${you} Cr` : ''}`}>
+                      <span className="flex flex-col">
+                        <span className="text-[13px] font-semibold">{t.referenceNumber.split('/')[0]}</span>
+                        <span className="mono text-[10px] uppercase text-fg-3">{t.category}</span>
                       </span>
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-[#F5F5F5] border border-[#E5E5E5] text-[#111111]">
-                        ✓ {bid.status || 'SUBMITTED'}
+                      <span className="flex items-center gap-2">
+                        <span className="block h-[18px]" style={{ width: `${(t.minimumTurnoverRequired / maxNeed) * 100}%`, background: within ? '#2563EB' : '#E2E8F0' }} />
+                        <span className="mono shrink-0 text-[11px] font-semibold">₹{t.minimumTurnoverRequired} Cr</span>
                       </span>
-                    </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap text-right">
-                      <Link href={`/bidder/bids/${bid.submissionId}/receipt`}>
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-[#111111] hover:bg-[#F5F5F5]">
-                          View Receipt <ExternalLink className="w-3 h-3 ml-1" />
-                        </Button>
-                      </Link>
-                    </td>
-                  </tr>
+                    </li>
+                  );
+                })}
+              </ul>
+              {you !== null ? (
+                <span className="pointer-events-none absolute inset-y-0 left-[calc(96px+0.75rem)] right-0" aria-hidden="true">
+                  <span className="absolute -bottom-5 top-0 w-0.5 bg-fg" style={{ left: `${(you / maxNeed) * 100}%` }} />
+                </span>
+              ) : null}
+              {you !== null ? <span className="mono mt-6 block text-right text-[10px] font-bold text-brand">YOU ₹{you.toFixed(2)} CR</span> : null}
+            </div>
+          ) : (
+            <EmptyState title="No open tenders" />
+          )}
+          {!profile || you === null ? <Link href="/bidder/settings" className="link text-xs">Add declared turnover →</Link> : null}
+        </section>
+
+        <section aria-label="Bid progress" className="card flex flex-col gap-3.5 p-5">
+          {latest ? (
+            <>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-col gap-1">
+                  <h2 className="h2 truncate">{latest.record.tenderTitle}</h2>
+                  <span className="mono text-[11px] text-fg-3">{latest.record.submissionId}</span>
+                </div>
+                <RawPill cls={decisionPill(latest.decision?.code)}>{latest.decision ? decisionLabel(latest.decision.code) : 'Under review'}</RawPill>
+              </div>
+              <ol className="m-0 flex list-none flex-col p-0">
+                {steps.map((s, i) => (
+                  <li key={s.t} className="grid grid-cols-[20px_minmax(0,1fr)] gap-3 pb-3.5">
+                    <span className="flex flex-col items-center gap-1">
+                      <span className="mt-1 block h-2.5 w-2.5 rounded-full" style={{ background: s.done ? '#2563EB' : '#FFFFFF', border: s.done ? undefined : '2px solid #94A3B8' }} aria-hidden="true" />
+                      {i < steps.length - 1 ? <span className="block w-px flex-grow bg-line" /> : null}
+                    </span>
+                    <span className="flex flex-col gap-0.5">
+                      <span className="text-[13px] font-semibold">{s.t}<span className="sr-only-v2">{s.done ? ' (done)' : ' (pending)'}</span></span>
+                      <span className="text-xs text-fg-2">{s.d}</span>
+                    </span>
+                  </li>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </ol>
+              <Link href={`/bidder/bids/${encodeURIComponent(latest.record.submissionId)}/receipt`} className="link mt-auto text-xs">View receipt and decision →</Link>
+            </>
+          ) : (
+            <EmptyState title="No bids yet" action={<Link href="/bidder/tenders" className="btn btn-primary btn-sm">Find a tender</Link>}>
+              Pick a tender, upload your documents and run the same check the officer will run.
+            </EmptyState>
+          )}
+        </section>
+      </div>
+
+      <section aria-label="Closing soon" className="card overflow-hidden">
+        <div className="flex justify-between px-5 pb-2 pt-4">
+          <h2 className="h2">Closing soon</h2>
+          <Link href="/bidder/tenders" className="link text-xs">All tenders →</Link>
+        </div>
+        {elig.length ? (
+          <ul className="m-0 list-none p-0">
+            {elig.slice(0, 4).map(({ t, e }) => {
+              const submitted = submittedTenderIds.has(t.tenderId);
+              const pill = submitted
+                ? { cls: 'pill-ink', label: 'Bid submitted' }
+                : e.status === 'qualify'
+                  ? { cls: 'pill-pass', label: 'You qualify' }
+                  : e.status === 'short'
+                    ? { cls: 'pill-fail', label: e.turnover.ok === false ? 'Turnover short' : 'Experience short' }
+                    : { cls: 'pill-neutral', label: 'Add profile figures' };
+              return (
+                <li key={t.id} className="tr">
+                  <Link href={`/bidder/tenders/${t.id}`} className="grid grid-cols-1 items-center gap-2 px-5 py-3 text-[13px] text-fg no-underline sm:grid-cols-[minmax(0,2.4fr)_150px_160px_90px] sm:gap-3">
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="font-semibold">{t.title}</span>
+                      <span className="mono text-[11px] text-fg-3">{t.referenceNumber}</span>
+                    </span>
+                    <span>
+                      {formatDate(t.closingDate)} <span className="text-xs text-fg-3">({relativeDays(daysUntil(t.closingDate, now))})</span>
+                    </span>
+                    <span><span className={`pill ${pill.cls}`}>{pill.label}</span></span>
+                    <span className="btn btn-secondary btn-sm">Open</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <div className="px-5 pb-5"><EmptyState title="No open tenders" /></div>
         )}
-      </div>
-
-      {/* 4. RECOMMENDED / ACTIVE TENDERS TABLE */}
-      <div className="rounded-xl border border-[#E5E5E5] bg-white overflow-hidden">
-        <div className="p-5 border-b border-[#E5E5E5] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-[#111111]" />
-              <h2 className="text-sm sm:text-base font-semibold text-[#111111]">
-                Recommended Tenders &amp; Active Opportunities
-              </h2>
-            </div>
-            <p className="text-xs text-[#555555] mt-0.5">
-              Live opportunities from Central and PSU procurement portals matching your engineering profile
-            </p>
-          </div>
-
-          <Link href="/bidder/tenders" className="inline-flex items-center gap-1 text-xs text-[#111111] hover:underline font-medium">
-            <span>View All Tenders</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-[#E5E5E5] bg-[#F7F7F7] text-[#555555] uppercase font-mono text-[10px] tracking-wider">
-                <th className="py-3 px-4 font-medium">Tender</th>
-                <th className="py-3 px-4 font-medium">Organisation</th>
-                <th className="py-3 px-4 font-medium">Closing Date</th>
-                <th className="py-3 px-4 font-medium">Est. Value</th>
-                <th className="py-3 px-4 font-medium">Readiness</th>
-                <th className="py-3 px-4 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E5E5E5]">
-              {activeTenders.slice(0, 5).map((tender, idx) => {
-                const readinessLabels = [
-                  'Ready to Bid (100% Eligible)',
-                  'Check Eligibility',
-                  'Ready to Bid (95% Match)',
-                  'Check Eligibility',
-                  'Ready to Bid (92% Match)',
-                ];
-                const readiness = readinessLabels[idx % readinessLabels.length];
-
-                return (
-                  <tr key={tender.id} className="hover:bg-[#F7F7F7] transition-colors">
-                    {/* Tender Title */}
-                    <td className="py-3.5 px-4 max-w-sm">
-                      <p className="font-medium text-[#111111] text-xs line-clamp-1">{tender.title}</p>
-                      <p className="text-[11px] text-[#777777] font-mono mt-0.5">{tender.referenceNumber}</p>
-                    </td>
-
-                    {/* Organisation */}
-                    <td className="py-3.5 px-4 whitespace-nowrap text-[#555555]">
-                      <div className="flex items-center gap-1.5">
-                        <Building2 className="w-3.5 h-3.5 text-[#777777] shrink-0" />
-                        <span className="truncate max-w-[180px]">{tender.issuingOrganisation}</span>
-                      </div>
-                    </td>
-
-                    {/* Closing Date */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5 text-[#555555] font-mono text-[11px]">
-                        <Clock className="w-3.5 h-3.5 text-[#777777] shrink-0" />
-                        <span>{new Date(tender.closingDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                      </div>
-                    </td>
-
-                    {/* Value */}
-                    <td className="py-3.5 px-4 whitespace-nowrap font-mono text-[#111111] font-medium">
-                      {tender.estimatedValue}
-                    </td>
-
-                    {/* Readiness */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-medium border bg-[#F5F5F5] text-[#111111] border-[#E5E5E5]">
-                        {readiness}
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-3.5 px-4 whitespace-nowrap text-right space-x-2">
-                      <Link href={`/bidder/tenders/${tender.id}/eligibility`}>
-                        <Button size="sm" variant="outline" className="h-7 px-2.5 text-[11px] border-[#E5E5E5] hover:bg-[#F5F5F5] text-[#111111] font-medium cursor-pointer">
-                          Check Eligibility
-                        </Button>
-                      </Link>
-                      <Link href={`/bidder/tenders/${tender.id}/compare`}>
-                        <Button size="sm" className="h-7 px-2.5 text-[11px] bg-[#111111] hover:bg-[#222222] text-white font-medium cursor-pointer">
-                          Start Bid
-                        </Button>
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </div>
+      </section>
+    </PageBody>
   );
 }
